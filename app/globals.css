@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), sans-serif;
+  --font-display: var(--font-display), sans-serif;
+  --color-brand-purple: #673DE6;
+  --color-brand-dark: #120A2A;
+  --color-brand-light: #F7F5FF;
+}
+
+@layer utilities {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(103, 61, 230, 0.1);
+  }
+  .glass-card-dark {
+    background: rgba(18, 10, 42, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(103, 61, 230, 0.2);
+  }
+}
