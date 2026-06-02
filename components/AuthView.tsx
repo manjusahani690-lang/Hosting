@@ -45,37 +45,118 @@ export default function AuthView({
   const [googleStatus, setGoogleStatus] = useState<'idle' | 'authorizing' | 'success'>('idle');
   const [selectedGoogleAccount, setSelectedGoogleAccount] = useState<string | null>(null);
 
+  const [forgotEmailError, setForgotEmailError] = useState<string | null>(null);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setAuthError(null);
 
-    // Simulate standard back-end user classification
-    setTimeout(() => {
-      const cleanEmail = email.trim().toLowerCase();
-      
-      // Setup role based on admin pattern rules
-      const isAdmin = cleanEmail === 'admin@cloudvibe.com' || cleanEmail.includes('admin') || password === 'admin123';
-      
-      if (setUserEmail) setUserEmail(cleanEmail || 'demo_user@workspace.net');
-      if (setUserRole) setUserRole(isAdmin ? 'admin' : 'customer');
-      
-      setIsLoggedIn(true);
-      setIsSubmitting(false);
+    const cleanEmail = email.trim().toLowerCase();
 
-      if (isAdmin) {
-        setActivePage('admin');
-      } else {
-        setActivePage('dashboard');
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        const existingAccountsStr = localStorage.getItem('cloudvibe_accounts');
+        let accounts = [];
+        try {
+          accounts = existingAccountsStr ? JSON.parse(existingAccountsStr) : [];
+        } catch (err) {
+          accounts = [];
+        }
+
+        // Fallback default accounts if empty
+        if (accounts.length === 0) {
+          accounts = [
+            { email: 'rajsahani.rgcs@gmail.com', password: 'rajsahani', role: 'customer' },
+            { email: 'admin@cloudvibe.com', password: 'admin123', role: 'admin' }
+          ];
+          localStorage.setItem('cloudvibe_accounts', JSON.stringify(accounts));
+        }
+
+        if (activeTab === 'login') {
+          // --- REALISTIC LOGIN FLOW ---
+          const user = accounts.find((acc: any) => acc.email.toLowerCase() === cleanEmail);
+          if (!user) {
+            setAuthError("✕ This email address is not registered. Please switch to 'Create Account' above.");
+            setIsSubmitting(false);
+            return;
+          }
+
+          if (user.password !== password) {
+            setAuthError("✕ Incorrect password. Please try again or click 'Forgot password?' below.");
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Generate secure session
+          const userRoleSelected = user.role || 'customer';
+          localStorage.setItem('cloudvibe_session_user', JSON.stringify({ email: user.email, role: userRoleSelected }));
+          
+          if (setUserEmail) setUserEmail(user.email);
+          if (setUserRole) setUserRole(userRoleSelected);
+          
+          setIsLoggedIn(true);
+          setIsSubmitting(false);
+
+          if (userRoleSelected === 'admin') {
+            setActivePage('admin');
+          } else {
+            setActivePage('dashboard');
+          }
+        } else {
+          // --- REALISTIC REGISTRATION FLOW ---
+          const userExists = accounts.some((acc: any) => acc.email.toLowerCase() === cleanEmail);
+          if (userExists) {
+            setAuthError("✕ An account with this email address already exists. Please Sign In instead.");
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Add new custom user
+          const newAcct = { email: cleanEmail, password: password, role: 'customer' };
+          accounts.push(newAcct);
+          localStorage.setItem('cloudvibe_accounts', JSON.stringify(accounts));
+
+          // Log in instantly 
+          localStorage.setItem('cloudvibe_session_user', JSON.stringify({ email: cleanEmail, role: 'customer' }));
+          
+          if (setUserEmail) setUserEmail(cleanEmail);
+          if (setUserRole) setUserRole('customer');
+          
+          setIsLoggedIn(true);
+          setIsSubmitting(false);
+          setActivePage('dashboard');
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 600);
+    }, 850);
   };
 
   const handleInstantDemoLogin = (role: 'customer' | 'admin') => {
     setIsSubmitting(true);
     setTimeout(() => {
-      const demoEmail = role === 'admin' ? 'admin@cloudvibe.com' : 'rajsahani.RgcS@gmail.com';
+      const demoEmail = role === 'admin' ? 'admin@cloudvibe.com' : 'rajsahani.rgcs@gmail.com';
+      const demoPassword = role === 'admin' ? 'admin123' : 'rajsahani';
+      
+      if (typeof window !== 'undefined') {
+        const existingAccountsStr = localStorage.getItem('cloudvibe_accounts');
+        let accounts = [];
+        try {
+          accounts = existingAccountsStr ? JSON.parse(existingAccountsStr) : [];
+        } catch (e) {
+          accounts = [];
+        }
+
+        // Ensure default accounts are seeded
+        const userExists = accounts.some((acc: any) => acc.email.toLowerCase() === demoEmail.toLowerCase());
+        if (!userExists) {
+          accounts.push({ email: demoEmail, password: demoPassword, role });
+          localStorage.setItem('cloudvibe_accounts', JSON.stringify(accounts));
+        }
+
+        localStorage.setItem('cloudvibe_session_user', JSON.stringify({ email: demoEmail, role }));
+      }
+
       if (setUserEmail) setUserEmail(demoEmail);
       if (setUserRole) setUserRole(role);
       
@@ -96,10 +177,27 @@ export default function AuthView({
     setGoogleStatus('authorizing');
     setSelectedGoogleAccount(emailSelected);
 
-    // Secure authentication handshake simulation
     setTimeout(() => {
       setGoogleStatus('success');
       setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          // Register in database if doesn't exist
+          const existingAccountsStr = localStorage.getItem('cloudvibe_accounts');
+          let accounts = [];
+          try {
+            accounts = existingAccountsStr ? JSON.parse(existingAccountsStr) : [];
+          } catch (e) {
+            accounts = [];
+          }
+          const userExists = accounts.some((acc: any) => acc.email.toLowerCase() === emailSelected.toLowerCase());
+          if (!userExists) {
+            accounts.push({ email: emailSelected, password: 'google_oauth_bypass_key', role });
+            localStorage.setItem('cloudvibe_accounts', JSON.stringify(accounts));
+          }
+
+          localStorage.setItem('cloudvibe_session_user', JSON.stringify({ email: emailSelected, role }));
+        }
+
         if (setUserEmail) setUserEmail(emailSelected);
         if (setUserRole) setUserRole(role);
         
@@ -120,7 +218,25 @@ export default function AuthView({
   // Interactive Forgot Password Actions
   const handleForgotEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotEmail.trim()) return;
+    setForgotEmailError(null);
+    const cleanForgotEmail = forgotEmail.trim().toLowerCase();
+    if (!cleanForgotEmail) return;
+
+    if (typeof window !== 'undefined') {
+      const existingAccountsStr = localStorage.getItem('cloudvibe_accounts');
+      let accounts = [];
+      try {
+        accounts = existingAccountsStr ? JSON.parse(existingAccountsStr) : [];
+      } catch (err) {
+        accounts = [];
+      }
+
+      const userExists = accounts.some((acc: any) => acc.email.toLowerCase() === cleanForgotEmail);
+      if (!userExists && cleanForgotEmail !== 'rajsahani.rgcs@gmail.com' && cleanForgotEmail !== 'admin@cloudvibe.com') {
+        setForgotEmailError("✕ This email is not registered in our DNS node ledger systems.");
+        return;
+      }
+    }
 
     // Generate a secure 4-digit code
     const randomCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -147,6 +263,34 @@ export default function AuthView({
     if (newPassword !== confirmNewPassword) {
       setResetError("Passwords do not match. Please verify configurations.");
       return;
+    }
+
+    // --- SAVE NEW PASSWORD SECURELY TO THE CORRESPONDING ACCOUNT ---
+    if (typeof window !== 'undefined') {
+      const existingAccountsStr = localStorage.getItem('cloudvibe_accounts');
+      let accounts = [];
+      try {
+        accounts = existingAccountsStr ? JSON.parse(existingAccountsStr) : [];
+      } catch (err) {
+        accounts = [];
+      }
+
+      const targetEmail = forgotEmail.trim().toLowerCase();
+      let updated = false;
+      const updatedAccounts = accounts.map((acc: any) => {
+        if (acc.email.toLowerCase() === targetEmail) {
+          updated = true;
+          return { ...acc, password: newPassword };
+        }
+        return acc;
+      });
+
+      // If user was not saved (but passed bypass validation), push fresh
+      if (!updated) {
+        updatedAccounts.push({ email: targetEmail, password: newPassword, role: 'customer' });
+      }
+
+      localStorage.setItem('cloudvibe_accounts', JSON.stringify(updatedAccounts));
     }
 
     setResetError(null);
@@ -324,12 +468,18 @@ export default function AuthView({
                       <input 
                         type="email" 
                         value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
+                        onChange={(e) => {
+                          setForgotEmail(e.target.value);
+                          setForgotEmailError(null);
+                        }}
                         placeholder="rajsahani.RgcS@gmail.com" 
                         required
                         className="w-full bg-slate-50 border border-slate-205 rounded-xl pl-9 pr-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-brand-purple focus:bg-white font-semibold"
                       />
                     </div>
+                    {forgotEmailError && (
+                      <p className="text-[11px] text-rose-500 font-bold mt-1.5 font-sans">✕ {forgotEmailError}</p>
+                    )}
                   </div>
 
                   <button 

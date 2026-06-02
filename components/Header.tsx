@@ -47,6 +47,9 @@ export default function Header({ activePage, setActivePage, isLoggedIn, setIsLog
   };
 
   const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cloudvibe_session_user');
+    }
     setIsLoggedIn(false);
     setActivePage('home');
   };

@@ -21,13 +21,77 @@ import AdminView from '@/components/AdminView';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Home() {
-  const [activePage, setActivePage] = useState<string>('home');
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [activePage, setActivePage] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const activeSession = localStorage.getItem('cloudvibe_session_user');
+      if (activeSession) {
+        try {
+          const session = JSON.parse(activeSession);
+          return session.role === 'admin' ? 'admin' : 'dashboard';
+        } catch (_) {}
+      }
+    }
+    return 'home';
+  });
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('cloudvibe_session_user');
+    }
+    return false;
+  });
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<any | null>(null);
   const [sharedSearchQuery, setSharedSearchQuery] = useState<string>('');
-  const [userEmail, setUserEmail] = useState<string>('');
-  const [userRole, setUserRole] = useState<'customer' | 'admin'>('customer');
+  const [userEmail, setUserEmail] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const activeSession = localStorage.getItem('cloudvibe_session_user');
+      if (activeSession) {
+        try {
+          return JSON.parse(activeSession).email || '';
+        } catch (_) {}
+      }
+    }
+    return '';
+  });
+  const [userRole, setUserRole] = useState<'customer' | 'admin'>(() => {
+    if (typeof window !== 'undefined') {
+      const activeSession = localStorage.getItem('cloudvibe_session_user');
+      if (activeSession) {
+        try {
+          return JSON.parse(activeSession).role || 'customer';
+        } catch (_) {}
+      }
+    }
+    return 'customer';
+  });
+
+  // Realistic persistent authentication system syncing & default account seeding
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // 1. Seed standard default user accounts database if not initialized
+      const existingAccounts = localStorage.getItem('cloudvibe_accounts');
+      if (!existingAccounts) {
+        const defaultAccounts = [
+          { email: 'rajsahani.rgcs@gmail.com', password: 'rajsahani', role: 'customer' },
+          { email: 'admin@cloudvibe.com', password: 'admin123', role: 'admin' }
+        ];
+        localStorage.setItem('cloudvibe_accounts', JSON.stringify(defaultAccounts));
+      }
+
+      // 2. Redirect securely to dashboard/admin if they are logged in but on auth screens
+      const activeSession = localStorage.getItem('cloudvibe_session_user');
+      if (activeSession && (activePage === 'login' || activePage === 'register')) {
+        try {
+          const session = JSON.parse(activeSession);
+          setTimeout(() => {
+            setActivePage(session.role === 'admin' ? 'admin' : 'dashboard');
+          }, 0);
+        } catch (e) {
+          console.error("Failed to parse cloudvibe auth session:", e);
+        }
+      }
+    }
+  }, [activePage]);
 
   const renderActiveView = () => {
     switch (activePage) {
