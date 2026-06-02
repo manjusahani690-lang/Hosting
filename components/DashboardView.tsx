@@ -160,9 +160,10 @@ export default function DashboardView({
 
   // --- External Domains List & Connector States ---
   const [connectedDomains, setConnectedDomains] = useState<any[]>([
+    { name: 'rajsahani.in', type: 'Custom Domain', registrar: 'GoDaddy', status: 'connected', ssl: true, ip: '103.86.177.30' },
     { name: 'rajsahani-wp.superai-builder.com', type: 'WordPress', registrar: 'Super AI', status: 'connected', ssl: true, ip: '103.86.177.30' }
   ]);
-  const [wpInstallDomain, setWpInstallDomain] = useState('rajsahani-wp.superai-builder.com');
+  const [wpInstallDomain, setWpInstallDomain] = useState('rajsahani.in');
   const [extDomainInput, setExtDomainInput] = useState('');
   const [extRegistrar, setExtRegistrar] = useState('GoDaddy');
   const [isMappingDomain, setIsMappingDomain] = useState(false);
@@ -640,118 +641,6 @@ export default function DashboardView({
             </button>
           </motion.div>
         )}
-
-        {/* --- ALL-INCLUSIVE CUSTOMER PRE-CONFIGURED SUCCESS PLATFORM (सब कुछ रेडी है!) --- */}
-        <div className="bg-gradient-to-br from-indigo-900 via-[#1a0a3a] to-[#0a0518] rounded-[2rem] p-6.5 sm:p-8 text-white space-y-6 relative overflow-hidden border border-indigo-500/20 shadow-2xl">
-          {/* Decorative network nodes in background */}
-          <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-12 -translate-y-12">
-            <svg className="w-[300px] h-[300px] text-white" viewBox="0 0 100 100" fill="none">
-              <circle cx="50" cy="50" r="30" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
-              <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" />
-              <line x1="10" y1="10" x2="90" y2="90" stroke="currentColor" strokeWidth="0.5" />
-            </svg>
-          </div>
-
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 border-b border-white/10 pb-5">
-            <div className="space-y-1">
-              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg px-2.5 py-1 text-[10px] font-black tracking-widest uppercase font-mono">
-                100% Fully Managed Ecosystem Active
-              </span>
-              <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight mt-1 flex items-center gap-2">
-                <span>Everything is Ready & Configure Customized!</span>
-                <span className="text-emerald-400">✓ Active</span>
-              </h2>
-              <p className="text-xs text-indigo-200 font-semibold max-w-2xl">
-                इस प्लान के साथ आपको सब कुछ बिलकुल रेडी और चालू मिलता है। आपको कोई भी टेक्निकल काम जैसे डेटाबेस बनाना, SSL इंस्टॉल करना या डोमेन मैप करना खुद से नहीं करना पड़ेगा - हमारी सुपर AI प्रणाली सब कुछ आटोमेटिक कॉन्फ़िगर कर चुकी है!
-              </p>
-            </div>
-            
-            <div className="bg-emerald-500/10 border border-emerald-400/20 px-4 py-3 rounded-2xl shrink-0 flex items-center gap-3">
-              <div className="w-2 md:w-2.5 h-2 md:h-2.5 bg-emerald-400 rounded-full animate-ping shrink-0" />
-              <div className="text-left font-mono">
-                <span className="text-[9px] text-slate-350 block leading-none">VIBE STATUS</span>
-                <span className="text-xs font-bold text-white leading-none block mt-1">Ready to Deploy</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Grid of Ready-made pre-installed items on the purchased layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
-            
-            {/* Item 1: Free Domain */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Domain Registered</span>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">FREE & CONFIGURED</span>
-              </div>
-              <h5 className="font-bold text-sm tracking-tight text-white leading-none">Domain Mapping System</h5>
-              <p className="text-[11px] text-zinc-300 leading-normal">
-                आपका प्रीमियम डोमेन <strong className="text-emerald-300 font-mono select-all text-xs">{wpInstallDomain}</strong> आटोमेटिक सर्वर क्लस्टर से जोड़कर SSL सक्रिय कर दिया गया है।
-              </p>
-            </div>
-
-            {/* Item 2: Free Unlimited Auto SSL */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Security Standard</span>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">HTTPS ENFORCED</span>
-              </div>
-              <h5 className="font-bold text-sm tracking-tight text-white leading-none">Free Unlimited Wildcard SSL</h5>
-              <p className="text-[11px] text-zinc-300 leading-normal">
-                Let&apos;s Encrypt SSL सर्टिफिकेट तुरंत और आटोमेटिक इंस्टॉल हो चुका है। आपका ट्रैफ़िक 256-bit मिलिट्री ग्रेड एन्क्रिप्शन के साथ पूरी तरह सुरक्षित है।
-              </p>
-            </div>
-
-            {/* Item 3: WordPress Auto Engine Ready */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Framework Suite</span>
-                <span className="text-[9px] bg-indigo-500/30 text-indigo-200 font-bold px-2 py-0.5 rounded-md">WP 1-CLICK INSTANT</span>
-              </div>
-              <h5 className="font-bold text-sm tracking-tight text-white leading-none">WordPress & MySQL Database</h5>
-              <p className="text-[11px] text-zinc-300 leading-normal">
-                WordPress की फाइलें और डेटाबेस सर्वर पहले से ही बैकेंड में ऑप्टिमाइज़ कर लिए गए हैं। बिना किसी कोडिंग के 1-क्लिक में वर्डप्रेस लाइव कर सकते हैं!
-              </p>
-            </div>
-
-            {/* Item 4: Cloudflare CDN active */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Speed Optimizer</span>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">CDN RAM CACHING</span>
-              </div>
-              <h5 className="font-bold text-sm tracking-tight text-white leading-none">LiteSpeed & CDN Edge Ready</h5>
-              <p className="text-[11px] text-zinc-300 leading-normal">
-                410+ ग्लोबल एज लोकेशन्स पर CDN सक्रिय किया जा चुका है ताकि भारत और दुनिया भर के ग्राहकों के लिए आपकी वेबसाइट मात्र 42ms में लोड हो सके!
-              </p>
-            </div>
-
-            {/* Item 5: Professional Corporate Mailbox */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Business Email</span>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">UNLIMITED ACTIVE</span>
-              </div>
-              <h5 className="font-bold text-sm tracking-tight text-white leading-none">DKIM & SPF Mail Server</h5>
-              <p className="text-[11px] text-zinc-300 leading-normal">
-                आपकी कंपनी के नाम पर प्रोफेशनल ईमेल (जैसे sales@yourdomain) आटोमेटिक सेटअप हो चुकी है, जिससे आपके मेल थेट स्पैम फोल्डर में नहीं, इनबॉक्स में जायेंगे।
-              </p>
-            </div>
-
-            {/* Item 6: Daily Snapshots System */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Data Redundancy</span>
-                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">DAILY SNAPSHOTS ON</span>
-              </div>
-              <h5 className="font-bold text-sm tracking-tight text-white leading-none">Auto Cloud Backup Vault</h5>
-              <p className="text-[11px] text-zinc-300 leading-normal">
-                रोज़ाना बैकअप लेने की चिंता समाप्त! आपका सर्वर आटोमेटिक तौर पर हर रात बैकअप स्टोर करता है, जिसे आप 1-क्लिक में कभी भी रीस्टोर कर सकते हैं।
-              </p>
-            </div>
-
-          </div>
-        </div>
 
         {/* Dynamic section split gridding */}
         <div className="grid grid-cols-12 gap-8 items-start">

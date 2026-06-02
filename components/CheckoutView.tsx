@@ -16,7 +16,14 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
   const [userEmail, setUserEmail] = useState('rajsahaniuk53@gmail.com');
   const [selectedPeriod, setSelectedPeriod] = useState<'48' | '24' | '12' | '1'>('48');
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
-  const [openPaymentMethod, setOpenPaymentMethod] = useState<'upi' | 'card' | 'paypal' | 'emi'>('upi');
+  const [openPaymentMethod, setOpenPaymentMethod] = useState<'upi' | 'card' | 'paypal' | 'emi' | 'simpl'>('upi');
+  
+  // Simpl safe & secure pay-later integration states
+  const [simplPhone, setSimplPhone] = useState('9110002026');
+  const [simplOtp, setSimplOtp] = useState('');
+  const [simplStep, setSimplStep] = useState<'phone' | 'otp' | 'success'>('phone');
+  const [simplOtpError, setSimplOtpError] = useState('');
+  const [isSimplLoading, setIsSimplLoading] = useState(false);
   
   // Interactive interactive state trackers
   const [domainSearchQuery, setDomainSearchQuery] = useState(selectedDomain?.name || '');
@@ -1035,6 +1042,207 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
                             <span>HSBC Bank Premium</span>
                             <span className="text-[10px] text-slate-450">&gt; 12 mo.</span>
                           </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* 5. Simpl Option Container - Secure & Safe Pay Later (India's Favorite BNPL Option) */}
+                <div className={`bg-white rounded-3xl border transition-all overflow-hidden ${openPaymentMethod === 'simpl' ? 'border-[#1fc7b1] shadow-md bg-emerald-50/5' : 'border-slate-250 hover:border-slate-350'}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenPaymentMethod('simpl');
+                      setSimplStep('phone');
+                      setSimplOtp('');
+                      setSimplOtpError('');
+                    }}
+                    className="w-full px-5 py-4 flex items-center justify-between cursor-pointer focus:outline-none"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors border-slate-300" style={{ borderColor: openPaymentMethod === 'simpl' ? '#1fc7b1' : undefined }}>
+                        {openPaymentMethod === 'simpl' && <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#1fc7b1' }} />}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm text-[#111] tracking-tight">Simpl Pay Later</span>
+                        <span className="bg-[#1fc7b1]/10 text-[#0f9686] text-[9px] px-1.5 py-0.5 rounded-full font-extrabold flex items-center gap-0.5 shrink-0 border border-[#1fc7b1]/20">
+                          <Lock className="w-2.5 h-2.5" /> Safe Option
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                      <svg width="42" height="14" viewBox="0 0 100 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#1fc7b1] fill-current">
+                        <path d="M12 25c-5.5 0-9-3.5-9-8.5s3.5-8.5 9-8.5c3.2 0 5.8 1.4 7.2 3.8l-3.3 1.9c-.8-1.2-2.1-1.9-3.9-1.9-3.1 0-5 2-5 4.7s1.9 4.7 5 4.7c1.8 0 3.1-.7 3.9-1.9l3.3 1.9C17.8 23.6 15.2 25 12 25zm11.5-16h3.8v15.5h-3.8V9zm18.5 8c0 4.8-3.2 8-8 8s-8-3.2-8-8 3.2-8 8-8 8 3.2 8 8zm-3.8 0c0-2.8-1.8-4.5-4.2-4.5s-4.2 1.7-4.2 4.5 1.8 4.5 4.2 4.5 4.2-1.7 4.2-4.5zm19.3 8c-3 0-5.3-1.6-6-4.2h12v-1.1c0-4.8-2.6-8.2-7.5-8.2-4.8 0-7.8 3.5-7.8 8.5s3 8.5 7.8 8.5c2.8 0 5.4-1.3 6.8-3.6l-3-2c-.7 1.3-1.8 2.1-3.3 2.1zm-.6-7.8h-6.2c.4-2.1 1.9-3.5 3.8-3.5 1.9 0 3.1 1.4 3.4 3.5zM71 9h3.8v15.5H71V9zm12.5 0h3.8v4.5h-3.8V9zm0 6h3.8v9.5h-3.8V15z" />
+                        <circle cx="94" cy="18" r="4" className="fill-emerald-400" />
+                      </svg>
+                      {openPaymentMethod === 'simpl' ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                    </div>
+                  </button>
+
+                  <AnimatePresence>
+                    {openPaymentMethod === 'simpl' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="px-6 pb-6 border-t border-slate-100 pt-5 space-y-4 text-left font-sans"
+                      >
+                        <div className="flex items-center gap-3 bg-emerald-50/40 p-3 rounded-2xl border border-emerald-100/30">
+                          <div className="p-2 bg-white rounded-xl shadow-sm text-[#1fc7b1] shrink-0 border border-emerald-50">
+                            <Lock className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-[#111] uppercase tracking-wider font-mono">1-Tap Secure Transaction Shield</h4>
+                            <p className="text-[11px] text-slate-500 leading-normal">Zero credit card or OTP exposures. Linked securely to your verified Indian billing balance with auto-debit ledger routes.</p>
+                          </div>
+                        </div>
+
+                        {simplStep === 'phone' && (
+                          <div className="space-y-3.5 pt-1">
+                            <div>
+                              <label className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono block mb-1.5">Enter Registered Mobile Number</label>
+                              <div className="relative">
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-extrabold text-sm text-slate-450 font-mono">+91</span>
+                                <input
+                                  type="tel"
+                                  maxLength={10}
+                                  value={simplPhone}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, '');
+                                    setSimplPhone(val);
+                                  }}
+                                  className="w-full pl-12 pr-4 py-3 bg-slate-50 focus:bg-white text-slate-900 border border-slate-200 focus:border-[#1fc7b1] focus:ring-1 focus:ring-[#1fc7b1] rounded-xl text-sm font-bold font-mono transition-colors focus:outline-none"
+                                  placeholder="Enter 10-digit number"
+                                />
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (simplPhone.length !== 10) {
+                                  alert('Please enter a valid 10-digit phone number.');
+                                  return;
+                                }
+                                setIsSimplLoading(true);
+                                setTimeout(() => {
+                                  setIsSimplLoading(false);
+                                  setSimplStep('otp');
+                                }, 1200);
+                              }}
+                              disabled={isSimplLoading || simplPhone.length !== 10}
+                              className="w-full py-3 bg-[#1fc7b1] hover:bg-[#1db4a0] disabled:bg-[#1fc7b1]/55 text-white rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider"
+                            >
+                              {isSimplLoading ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Authorizing Security Channel...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Proceed Safely in 1-Click</span>
+                                  <ArrowRight className="w-3.5 h-3.5" />
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+
+                        {simplStep === 'otp' && (
+                          <div className="space-y-3.5 pt-1">
+                            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 text-center">
+                              <p className="text-[11px] font-bold text-slate-600">Enter validation code sent on <span className="font-mono text-slate-900 font-extrabold">+91 {simplPhone}</span></p>
+                              <p className="text-[9.5px] font-bold text-emerald-600 mt-0.5 tracking-tight">🔒 Pre-approved credentials active under sandboxed environment.</p>
+                            </div>
+
+                            <div>
+                              <div className="flex justify-between items-center mb-1">
+                                <label className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono block">Simpl Secure OTP</label>
+                                <span className="text-[9.5px] font-bold text-[#1fc7b1] uppercase font-mono bg-[#1fc7b1]/5 px-1.5 rounded">Demo: 2026 or 1234</span>
+                              </div>
+                              <input
+                                type="text"
+                                maxLength={4}
+                                value={simplOtp}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^0-9]/g, '');
+                                  setSimplOtp(val);
+                                  setSimplOtpError('');
+                                }}
+                                className="w-full text-center tracking-widest py-3 bg-slate-50 focus:bg-white text-slate-950 border border-slate-200 focus:border-[#1fc7b1] focus:ring-2 focus:ring-[#1fc7b1]/20 rounded-xl text-xl font-black font-mono transition-colors focus:outline-none"
+                                placeholder="• • • •"
+                              />
+                              {simplOtpError && (
+                                <p className="text-[10.5px] text-rose-500 font-bold mt-1.5">✕ {simplOtpError}</p>
+                              )}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSimplStep('phone')}
+                                className="px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 text-xs font-bold transition-colors cursor-pointer"
+                              >
+                                Edit Phone
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (simplOtp.length !== 4) {
+                                    setSimplOtpError('Please enter the 4-digit code.');
+                                    return;
+                                  }
+                                  setIsSimplLoading(true);
+                                  setTimeout(() => {
+                                    setIsSimplLoading(false);
+                                    if (simplOtp === '1234' || simplOtp === '2026' || simplOtp === '0026' || simplOtp.trim().length === 4) {
+                                      setSimplStep('success');
+                                      setIsSuccess(true);
+                                      setIsLoggedIn(true);
+                                      setTimeout(() => {
+                                        setActivePage('dashboard');
+                                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      }, 1800);
+                                    } else {
+                                      setSimplOtpError('Invalid OTP code. Try entering 2026 or 1234.');
+                                    }
+                                  }, 1500);
+                                }}
+                                disabled={isSimplLoading || simplOtp.length !== 4}
+                                className="flex-1 py-3 bg-[#1fc7b1] hover:bg-[#1db4a0] text-white rounded-xl text-xs font-extrabold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase tracking-wider"
+                              >
+                                {isSimplLoading ? (
+                                  <>
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Verifying Secure Ledger...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>Verify & Pay INR Instantly</span>
+                                    <Check className="w-3.5 h-3.5" />
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {simplStep === 'success' && (
+                          <div className="text-center py-4 space-y-2">
+                            <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                              <Check className="w-5 h-5" />
+                            </div>
+                            <h4 className="text-sm font-extrabold text-[#111] tracking-tight">Account Linked & Paid Safely!</h4>
+                            <p className="text-[11px] text-slate-500">Connecting you seamlessly to your Super AI WordPress dashboard panel...</p>
+                          </div>
+                        )}
+
+                        {/* Security Certification Footers */}
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[9.5px] text-slate-400 font-mono select-none">
+                          <span className="flex items-center gap-0.5">🛡️ PCI-DSS Level 1</span>
+                          <span className="flex items-center gap-0.5">🔒 AES-256 Bit SSL Shield</span>
                         </div>
                       </motion.div>
                     )}
