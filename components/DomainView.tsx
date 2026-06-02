@@ -75,6 +75,9 @@ export default function DomainView({
 
       const data = await response.json();
       if (response.ok && data.results) {
+        if (data.directMatches) {
+          setDirectMatches(data.directMatches);
+        }
         setResults(data.results);
       } else {
         // Fallback to beautiful suggestions if API is offline
@@ -134,14 +137,14 @@ export default function DomainView({
           <div className="inline-flex items-center space-x-2 bg-brand-purple/10 border border-brand-purple/20 px-3 py-1 rounded-full">
             <Sparkles className="h-4 w-4 text-brand-purple" />
             <span className="text-xs font-semibold text-brand-purple uppercase tracking-wider">
-              Gemini Backed Domain Engine
+              Super AI Backed Domain Engine
             </span>
           </div>
           <h1 className="text-3xl md:text-5xl font-display font-black text-slate-900 tracking-tight">
             Find the Perfect Identity with AI
           </h1>
           <p className="text-sm md:text-base text-slate-500 max-w-xl mx-auto leading-relaxed">
-            Verify immediate registration availability or describe your idea to get tailored extensions suggested dynamically using server-side Gemini intelligence models.
+            Verify immediate registration availability or describe your idea to get tailored extensions suggested dynamically using server-side Super AI intelligence models.
           </p>
         </div>
 
@@ -213,7 +216,7 @@ export default function DomainView({
                 <div className="inline-block p-4 rounded-full bg-brand-purple/10 text-brand-purple animate-pulse">
                   <Sparkles className="w-8 h-8" />
                 </div>
-                <h3 className="font-display font-extrabold text-slate-800 text-lg">Querying Global DNS & Gemini AI Services</h3>
+                <h3 className="font-display font-extrabold text-slate-800 text-lg">Querying Global DNS & Super AI Services</h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
                   Calculating registration availability, predicting custom extensions, parsing brand scores, and preparing secure price quotes.
                 </p>
@@ -378,7 +381,7 @@ export default function DomainView({
                                     </span>
                                   ))}
                                 </div>
-                                <p className="text-[9px] text-slate-400 font-semibold mt-1">Sourced by Gemini Core</p>
+                                <p className="text-[9px] text-slate-400 font-semibold mt-1">Sourced by Super AI Core</p>
                               </div>
                             </div>
 

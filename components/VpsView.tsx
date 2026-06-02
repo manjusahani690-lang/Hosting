@@ -9,10 +9,10 @@ interface VpsViewProps {
 }
 
 const vpsPlans = [
-  { cores: 2, ram: '8 GB', ssd: '100 GB', bandwidth: '2 TB IP Transit', price: 9.99, name: 'Cyber Shell KVM 1' },
-  { cores: 4, ram: '16 GB', ssd: '200 GB', bandwidth: '4 TB IP Transit', price: 18.99, name: 'Cyber Shell KVM 2' },
-  { cores: 6, ram: '24 GB', ssd: '350 GB', bandwidth: '8 TB IP Transit', price: 29.99, name: 'Cyber Shell KVM 4' },
-  { cores: 8, ram: '32 GB', ssd: '500 GB', bandwidth: '12 TB IP Transit', price: 49.99, name: 'Cyber Shell KVM 8' }
+  { cores: 2, ram: '8 GB', ssd: '100 GB', bandwidth: '2 TB IP Transit', price: 6.99, name: 'Cyber Shell KVM 1' },
+  { cores: 4, ram: '16 GB', ssd: '200 GB', bandwidth: '4 TB IP Transit', price: 13.29, name: 'Cyber Shell KVM 2' },
+  { cores: 6, ram: '24 GB', ssd: '350 GB', bandwidth: '8 TB IP Transit', price: 20.99, name: 'Cyber Shell KVM 4' },
+  { cores: 8, ram: '32 GB', ssd: '500 GB', bandwidth: '12 TB IP Transit', price: 34.99, name: 'Cyber Shell KVM 8' }
 ];
 
 export default function VpsView({ setActivePage, setSelectedPlan }: VpsViewProps) {

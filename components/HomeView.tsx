@@ -31,8 +31,8 @@ const features = [
   },
   {
     icon: Sparkles,
-    title: 'Gemini AI Site Builder',
-    desc: 'Describe your vision in simple text, and our integrated Gemini engine will render a custom layout structure with styled Tailwind grids.',
+    title: 'Super AI Site Builder',
+    desc: 'Describe your vision in simple text, and our integrated Super AI engine will render a custom layout structure with styled Tailwind grids.',
     badge: 'Exclusive'
   },
   {
@@ -59,15 +59,15 @@ const plans = [
   {
     id: 'single',
     name: 'Single',
-    desc: 'A great solution for beginners',
-    percentageOff: '83% off',
+    desc: 'Unmatched entry-level WordPress performance',
+    percentageOff: '88% off',
     regPrice: {
-      usd: 4.99,
-      inr: 399
+      usd: 3.49,
+      inr: 279
     },
     notes: {
-      usd: 'Get 48 months for $37.92 (regular price $239.52). Renews at $5.99/mo.',
-      inr: 'Get 48 months for ₹3,312 (regular price ₹19,152). Renews at ₹289/mo.'
+      usd: 'Get 48 months for $26.40 (regular price $167.52). Renews at $4.19/mo.',
+      inr: 'Get 48 months for ₹2,304 (regular price ₹13,392). Renews at ₹199/mo.'
     },
     features: [
       'Create 1 website',
@@ -81,23 +81,23 @@ const plans = [
       'Migrate your site for free and with no downtime'
     ],
     prices: {
-      usd: { '1month': 4.99, '6months': 3.49, '12months': 2.49, '24months': 1.49, '48months': 0.79 },
-      inr: { '1month': 399, '6months': 299, '12months': 199, '24months': 129, '48months': 69 }
+      usd: { '1month': 3.49, '6months': 2.44, '12months': 1.74, '24months': 1.04, '48months': 0.55 },
+      inr: { '1month': 279, '6months': 209, '12months': 139, '24months': 90, '48months': 48 }
     },
     popular: false
   },
   {
     id: 'premium',
     name: 'Premium',
-    desc: 'Everything you need to get started',
-    percentageOff: '75% off',
+    desc: 'Most popular customer-ready environment',
+    percentageOff: '82% off',
     regPrice: {
-      usd: 6.99,
-      inr: 599
+      usd: 4.89,
+      inr: 419
     },
     notes: {
-      usd: 'Get 48 months for $71.52 (regular price $335.52). Renews at $8.99/mo.',
-      inr: 'Get 48 months for ₹7,152 (regular price ₹28,752). Renews at ₹449/mo.'
+      usd: 'Get 48 months for $49.92 (regular price $234.72). Renews at $6.29/mo.',
+      inr: 'Get 48 months for ₹4,992 (regular price ₹20,112). Renews at ₹314/mo.'
     },
     features: [
       'Create up to 3 websites',
@@ -109,23 +109,23 @@ const plans = [
       'Free Email marketing for 1 year'
     ],
     prices: {
-      usd: { '1month': 6.99, '6months': 4.99, '12months': 3.49, '24months': 2.49, '48months': 1.49 },
-      inr: { '1month': 599, '6months': 449, '12months': 299, '24months': 199, '48months': 149 }
+      usd: { '1month': 4.89, '6months': 3.49, '12months': 2.44, '24months': 1.74, '48months': 1.04 },
+      inr: { '1month': 419, '6months': 314, '12months': 209, '24months': 139, '48months': 104 }
     },
     popular: true
   },
   {
     id: 'business',
     name: 'Business',
-    desc: 'More tools and power for growth',
-    percentageOff: '64% off',
+    desc: 'Power and high concurrency for stores',
+    percentageOff: '75% off',
     regPrice: {
-      usd: 9.99,
-      inr: 699
+      usd: 6.99,
+      inr: 489
     },
     notes: {
-      usd: 'Get 48 months for $119.52 (regular price $479.52). Renews at $12.99/mo.',
-      inr: 'Get 48 months for ₹11,952 (regular price ₹33,552). Renews at ₹649/mo.'
+      usd: 'Get 48 months for $83.52 (regular price $335.52). Renews at $9.09/mo.',
+      inr: 'Get 48 months for ₹8,352 (regular price ₹23,472). Renews at ₹454/mo.'
     },
     features: [
       'Create up to 50 websites',
@@ -142,8 +142,8 @@ const plans = [
       'Manage sites easier with WordPress Multisite'
     ],
     prices: {
-      usd: { '1month': 9.99, '6months': 7.49, '12months': 5.49, '24months': 3.99, '48months': 2.49 },
-      inr: { '1month': 699, '6months': 549, '12months': 449, '24months': 349, '48months': 249 }
+      usd: { '1month': 6.99, '6months': 5.24, '12months': 3.84, '24months': 2.79, '48months': 1.74 },
+      inr: { '1month': 489, '6months': 384, '12months': 314, '24months': 244, '48months': 174 }
     },
     popular: false
   },
@@ -151,10 +151,10 @@ const plans = [
     id: 'vps',
     name: 'VPS Cyber Nodes',
     desc: 'Isolated Virtual Private Server with full root SSH configuration.',
-    percentageOff: '50% off',
+    percentageOff: '65% off',
     regPrice: {
-      usd: 24.99,
-      inr: 1499
+      usd: 17.49,
+      inr: 1049
     },
     notes: {
       usd: 'Includes Dedicated IP and blazing SSD speeds with KVM isolated hypervisors.',
@@ -170,8 +170,8 @@ const plans = [
       'Instant standard OS deployment profiles'
     ],
     prices: {
-      usd: { '1month': 19.99, '6months': 14.99, '12months': 9.99, '24months': 7.99, '48months': 4.99 },
-      inr: { '1month': 1499, '6months': 1199, '12months': 999, '24months': 799, '48months': 399 }
+      usd: { '1month': 13.99, '6months': 10.49, '12months': 6.99, '24months': 5.59, '48months': 3.49 },
+      inr: { '1month': 1049, '6months': 839, '12months': 699, '24months': 559, '48months': 279 }
     },
     popular: false
   }
@@ -187,7 +187,7 @@ const FAQs = [
     a: 'Absolutely! Our Premium Cloud, Business Pro, and VPS Cyber plans all include a free custom domain registration (.com, .net, .io, .co, or .online) for the entire initial year of service registration.'
   },
   {
-    q: 'Can the Gemini AI Website tool generate full business layouts?',
+    q: 'Can the Super AI Website tool generate full business layouts?',
     a: 'Yes. Our AI Website Builder handles prompt instructions on the fly. It suggests color palettes, selects matched typography, writes highly compelling humanized marketing copy, and outputs a clean Tailwind grid UI which can be deployed to your live server in the hPanel.'
   },
   {
@@ -218,9 +218,41 @@ const testimonials = [
 ];
 
 export default function HomeView({ setActivePage, setSelectedPlan, setSharedSearchQuery }: HomeViewProps) {
+  // Load plans list dynamically from localStorage if present
+  const [plansList, setPlansList] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('vibe_plans_rates_v2');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          console.error("Failed to parse vibe_plans_rates_v2", e);
+        }
+      }
+    }
+    return plans;
+  });
+
   const [billingCycle, setBillingCycle] = useState<'1month' | '6months' | '12months' | '24months' | '48months'>('48months');
   const [currency, setCurrency] = useState<'inr' | 'usd'>('inr');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleStorageUpdate = () => {
+        const updated = localStorage.getItem('vibe_plans_rates_v2');
+        if (updated) {
+          try {
+            setPlansList(JSON.parse(updated));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      };
+      window.addEventListener('storage', handleStorageUpdate);
+      return () => window.removeEventListener('storage', handleStorageUpdate);
+    }
+  }, []);
   
   // Dashboard Interactive Preview State
   const [currentCpu, setCurrentCpu] = useState(38);
@@ -326,7 +358,7 @@ export default function HomeView({ setActivePage, setSelectedPlan, setSharedSear
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                Experience ultra-fast cloud speeds, a built-in Gemini-powered AI web generator, free registrations, and hPanel controls engineered to maximize your conversion rates.
+                Experience ultra-fast cloud speeds, a built-in Super AI-powered web generator, free registrations, and hPanel controls engineered to maximize your conversion rates.
               </p>
 
               {/* Conversion Metrics */}
@@ -555,7 +587,7 @@ export default function HomeView({ setActivePage, setSelectedPlan, setSharedSear
                                 <div className="p-1 rounded-md bg-amber-500/10 text-amber-400"><Activity className="w-3.5 h-3.5 animate-pulse" /></div>
                                 <div>
                                   <p className="text-white font-bold text-xs">brandagency.net</p>
-                                  <p className="text-[10px] text-slate-500">Gemini Builder template draft</p>
+                                  <p className="text-[10px] text-slate-500">Super AI Builder template draft</p>
                                 </div>
                               </div>
                               <span className="text-xs font-mono text-amber-400">DNS Config</span>
@@ -754,7 +786,7 @@ export default function HomeView({ setActivePage, setSelectedPlan, setSharedSear
 
           {/* Pricing Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-            {plans.map((p, pidx) => {
+            {plansList.map((p, pidx) => {
               const unitPrice = p.prices[currency][billingCycle];
               const symbol = currency === 'inr' ? '₹' : '$';
               const monthsCount = billingCycle === '1month' ? 1 : billingCycle === '6months' ? 6 : billingCycle === '12months' ? 12 : billingCycle === '24months' ? 24 : 48;
@@ -831,7 +863,7 @@ export default function HomeView({ setActivePage, setSelectedPlan, setSharedSear
 
                     {/* Feature Lists */}
                     <ul className="space-y-3 py-1 text-xs font-medium">
-                      {p.features.map((feat, fidx) => {
+                      {p.features.map((feat: string, fidx: number) => {
                         const isPremiumHighlight = feat.includes("FREE") || feat.includes("NEW");
                         return (
                           <li key={fidx} className="flex items-start gap-2.5">
@@ -1108,7 +1140,7 @@ export default function HomeView({ setActivePage, setSelectedPlan, setSharedSear
             Deploy Your Brand Ecosystem On Ultra Speed Servers
           </h2>
           <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Take advantage of active cybersecurity DDoS firewalls, standard premium caching, DNS control tools, and our advanced Gemini AI generator at zero extra cost. Guaranteed support.
+            Take advantage of active cybersecurity DDoS firewalls, standard premium caching, DNS control tools, and our advanced Super AI generator at zero extra cost. Guaranteed support.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <button

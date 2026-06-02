@@ -1,6 +1,6 @@
 {
-  "name": "SaaS Hosting Website",
-  "description": "A premium SaaS hosting and AI website builder platform inspired by Hostinger, featuring dynamic domain checker, comparison plans, dashboard, and AI website generation.",
+  "name": "Super AI Site Builder",
+  "description": "Super AI Site Builder - A premium hosting and AI website builder platform featuring dynamic domain checkers, plans, admin panel, and direct AI generation.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

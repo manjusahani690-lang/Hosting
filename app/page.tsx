@@ -95,6 +95,7 @@ export default function Home() {
             selectedPlan={selectedPlan}
             setSelectedPlan={setSelectedPlan}
             userEmail={userEmail || 'rajsahani.RgcS@gmail.com'}
+            setActivePage={setActivePage}
           />
         );
       case 'admin':

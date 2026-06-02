@@ -314,7 +314,7 @@ export default function AuthView({
                 <form onSubmit={handleForgotEmailSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      Enter your corporate registered email below. VibeHost diagnostic checks will generate a secure OTP key directly on-screen to reset credentials instantly.
+                      Enter your corporate registered email below. Super AI Site Builder diagnostic checks will generate a secure OTP key directly on-screen to reset credentials instantly.
                     </p>
                     <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono">Your Account Email</label>
                     <div className="relative">
@@ -353,7 +353,7 @@ export default function AuthView({
                         <span>CloudVibe SMS OTP Simulator Channel</span>
                       </div>
                       <p className="text-[10.5px] text-slate-500">
-                        VibeHost security system has dispatched the access key to <strong className="text-slate-700">{forgotEmail}</strong>.
+                        Super AI Site Builder security system has dispatched the access key to <strong className="text-slate-700">{forgotEmail}</strong>.
                       </p>
                       <div className="pt-1.5 flex items-center gap-1.5">
                         <span className="text-[10px] font-mono uppercase bg-amber-100 text-amber-850 px-2 py-1 rounded font-black tracking-widest">
@@ -538,7 +538,7 @@ export default function AuthView({
             {googleStatus === 'idle' && (
               <div className="p-6 space-y-4">
                 <p className="text-[11.5px] text-slate-500">
-                  Select a Google Account to sign-in securely to VibeHost. Security validation ensures zero session hijacking vectors.
+                  Select a Google Account to sign-in securely to Super AI Site Builder. Security validation ensures zero session hijacking vectors.
                 </p>
 
                 <div className="space-y-2">

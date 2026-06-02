@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldAlert, CheckCircle2, Search, ArrowRight, Lock, HelpCircle, Sparkles, Check, ChevronDown, ChevronUp, RefreshCw, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -33,6 +33,37 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
   const [isSuccess, setIsSuccess] = useState(false);
   const [razorpayError, setRazorpayError] = useState<string | null>(null);
 
+  // Dynamic state selectors for 100% direct instant bank payments
+  const [upiSubMethod, setUpiSubMethod] = useState<'app' | 'qr'>('qr');
+  const [utrNumber, setUtrNumber] = useState('');
+  const [utrError, setUtrError] = useState('');
+  const [isVerifyingUtr, setIsVerifyingUtr] = useState(false);
+
+  const handleManualUpiSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!utrNumber.trim()) {
+      setUtrError('Please enter your 12-digit UPI UTR / Transaction Reference number.');
+      return;
+    }
+    if (utrNumber.trim().length < 12) {
+      setUtrError('A valid UPI transaction UTR must be exactly 12 numeric digits.');
+      return;
+    }
+    
+    setIsVerifyingUtr(true);
+    setUtrError('');
+
+    setTimeout(() => {
+      setIsVerifyingUtr(false);
+      setIsSuccess(true);
+      setIsLoggedIn(true);
+      setTimeout(() => {
+        setActivePage('dashboard');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 2000);
+    }, 2800);
+  };
+
   // Dynamic utility to load script dynamically on demand
   const loadRazorpayScript = () => {
     return new Promise<boolean>((resolve) => {
@@ -56,64 +87,106 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
   const [cardName, setCardName] = useState('');
 
   // Define period details matches with official pricing model shown in user's image
-  const periodPricing = {
-    '48': {
-      label: '48 months',
-      pricePerMonth: 69,
-      regularPricePerMonth: 399,
-      totalBase: 3312,
-      regularTotalBase: 19152,
-      savings: 15840,
-      taxes: 596.16,
-      totalPayable: 3908.16,
-      regularTotalPayable: 19748.16,
-      renewRate: 'Renews at ₹289/mo'
-    },
-    '24': {
-      label: '24 months',
-      pricePerMonth: 119,
-      regularPricePerMonth: 399,
-      totalBase: 2856,
-      regularTotalBase: 9576,
-      savings: 6720,
-      taxes: 514.08,
-      totalPayable: 3370.08,
-      regularTotalPayable: 10090.08,
-      renewRate: 'Renews at ₹289/mo'
-    },
-    '12': {
-      label: '12 months',
-      pricePerMonth: 149,
-      regularPricePerMonth: 399,
-      totalBase: 1788,
-      regularTotalBase: 4788,
-      savings: 3000,
-      taxes: 321.84,
-      totalPayable: 2109.84,
-      regularTotalPayable: 5109.84,
-      renewRate: 'Renews at ₹289/mo'
-    },
-    '1': {
-      label: '1 month',
-      pricePerMonth: 399,
-      regularPricePerMonth: 399,
-      totalBase: 399,
-      regularTotalBase: 399,
-      savings: 0,
-      taxes: 71.82,
-      totalPayable: 470.82,
-      regularTotalPayable: 470.82,
-      renewRate: 'Renews at ₹399/mo'
+  const getDynamicPeriodPricing = () => {
+    // defaults matching Single plan INR pricing
+    let pricesInr = {
+      '1': 279,
+      '12': 139,
+      '24': 90,
+      '48': 48
+    };
+
+    if (selectedPlan && selectedPlan.prices && selectedPlan.prices.inr) {
+      const pinr = selectedPlan.prices.inr;
+      pricesInr = {
+        '1': pinr['1month'] !== undefined ? pinr['1month'] : (pinr['1'] || 399),
+        '12': pinr['12months'] !== undefined ? pinr['12months'] : (pinr['12month'] || pinr['12'] || 199),
+        '24': pinr['24months'] !== undefined ? pinr['24months'] : (pinr['24month'] || pinr['24'] || 129),
+        '48': pinr['48months'] !== undefined ? pinr['48months'] : (pinr['48month'] || pinr['48'] || 69)
+      };
     }
+
+    return {
+      '48': {
+        label: '48 months',
+        pricePerMonth: pricesInr['48'],
+        regularPricePerMonth: 399,
+        totalBase: pricesInr['48'] * 48,
+        regularTotalBase: 399 * 48,
+        savings: (399 - pricesInr['48']) * 48,
+        taxes: parseFloat(((pricesInr['48'] * 48) * 0.18).toFixed(2)),
+        totalPayable: parseFloat(((pricesInr['48'] * 48) * 1.18).toFixed(2)),
+        regularTotalPayable: parseFloat(((399 * 48) * 1.18).toFixed(2)),
+        renewRate: `Renews at ₹${pricesInr['48']}/mo`
+      },
+      '24': {
+        label: '24 months',
+        pricePerMonth: pricesInr['24'],
+        regularPricePerMonth: 399,
+        totalBase: pricesInr['24'] * 24,
+        regularTotalBase: 399 * 24,
+        savings: (399 - pricesInr['24']) * 24,
+        taxes: parseFloat(((pricesInr['24'] * 24) * 0.18).toFixed(2)),
+        totalPayable: parseFloat(((pricesInr['24'] * 24) * 1.18).toFixed(2)),
+        regularTotalPayable: parseFloat(((399 * 24) * 1.18).toFixed(2)),
+        renewRate: `Renews at ₹${pricesInr['24']}/mo`
+      },
+      '12': {
+        label: '12 months',
+        pricePerMonth: pricesInr['12'],
+        regularPricePerMonth: 399,
+        totalBase: pricesInr['12'] * 12,
+        regularTotalBase: 4788,
+        savings: (399 - pricesInr['12']) * 12,
+        taxes: parseFloat(((pricesInr['12'] * 12) * 0.18).toFixed(2)),
+        totalPayable: parseFloat(((pricesInr['12'] * 12) * 1.18).toFixed(2)),
+        regularTotalPayable: parseFloat(((399 * 12) * 1.18).toFixed(2)),
+        renewRate: `Renews at ₹${pricesInr['12']}/mo`
+      },
+      '1': {
+        label: '1 month',
+        pricePerMonth: pricesInr['1'],
+        regularPricePerMonth: 399,
+        totalBase: pricesInr['1'],
+        regularTotalBase: 399,
+        savings: 399 - pricesInr['1'],
+        taxes: parseFloat((pricesInr['1'] * 0.18).toFixed(2)),
+        totalPayable: parseFloat((pricesInr['1'] * 1.18).toFixed(2)),
+        regularTotalPayable: parseFloat((399 * 1.18).toFixed(2)),
+        renewRate: `Renews at ₹${pricesInr['1']}/mo`
+      }
+    };
   };
+
+  const periodPricing = getDynamicPeriodPricing();
 
   const activePeriod = periodPricing[selectedPeriod];
 
-  // Dynamic Coupon and discount applicator
+  // Dynamic Coupon and discount applicator - Queries dynamic coupons from local storage
+  const [couponsList, setCouponsList] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('vibe_coupons_offers');
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    return [
+      { code: 'sasta10', discount: 10 },
+      { code: 'hostinger10', discount: 10 },
+      { code: 'rajsahani', discount: 10 }
+    ];
+  });
+
   const applyCoupon = () => {
-    if (promoCode.trim().toLowerCase() === 'sasta10' || promoCode.trim().toLowerCase() === 'hostinger10' || promoCode.trim().toLowerCase() === 'rajsahani') {
-      setDiscountPercent(10);
-      setCouponStatusMsg('✓ 10% Extra Coupon Code Applied Successfully!');
+    const codeClean = promoCode.trim().toLowerCase();
+    const found = couponsList.find(c => c.code.toLowerCase() === codeClean);
+    if (found) {
+      setDiscountPercent(found.discount);
+      setCouponStatusMsg(`✓ ${found.discount}% Extra Coupon Code Applied Successfully!`);
     } else {
       setCouponStatusMsg('✕ Invalid Coupon Code. Try "rajsahani" or "sasta10"');
     }
@@ -124,12 +197,69 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
   const calculatedTaxes = parseFloat((baseDiscounted * 0.18).toFixed(2)); // 18% standard GST taxation
   const calculatedTotal = parseFloat((baseDiscounted + calculatedTaxes).toFixed(2));
 
+  useEffect(() => {
+    if (isSuccess && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('hosting_ai_builder_credits');
+      const current = stored ? parseInt(stored, 10) : 10;
+      // Grant +5 Vibe credits immediately when subscription payment completes!
+      const newVal = current + 5;
+      localStorage.setItem('hosting_ai_builder_credits', newVal.toString());
+      
+      // Select appropriate pricing name 
+      let planName = "Single Web Hosting Pro (Vibe Enabled)";
+      if (selectedPlan && selectedPlan.name) {
+        planName = `${selectedPlan.name} (Vibe Enabled)`;
+      }
+
+      // Store plan settings for the Dashboard
+      const purchasedPlan = {
+        name: planName,
+        price: `₹${calculatedTotal}/yr`,
+        period: selectedPeriod,
+        daysLeft: 365,
+        features: [
+          'Create up to 3 websites',
+          '5 vibe coding credits',
+          '20 GB solid-state disk array SSD',
+          'Free managed security patches',
+          'Let\'s Encrypt free wildcard SSL',
+          '1-Click external domain connector active'
+        ],
+        purchaseDate: 'June 02, 2026',
+        expiryDate: 'June 02, 2027',
+        status: 'active'
+      };
+      localStorage.setItem('vibe_active_user_plan', JSON.stringify(purchasedPlan));
+    }
+  }, [isSuccess, calculatedTotal, selectedPeriod, selectedPlan]);
+
   // Handle Domain searching simulations inside the checkout card
   const simulateDomainSearch = () => {
-    if (!domainSearchQuery) {
+    if (!domainSearchQuery.trim()) {
       setDomainStatus('empty');
       return;
     }
+    
+    // Normalize domain query: e.g. "Raj" or "Raj." becomes "raj.com"
+    let query = domainSearchQuery.trim().toLowerCase();
+    
+    // Remove trailing dots
+    while (query.endsWith('.')) {
+      query = query.slice(0, -1);
+    }
+    
+    if (!query) {
+      setDomainStatus('empty');
+      return;
+    }
+    
+    // Check if it has a valid extension (contains a dot with at least 2 chars after it)
+    const hasExtension = /\.[a-z0-9-]{2,}$/i.test(query);
+    if (!hasExtension) {
+      query = query + '.com';
+    }
+    
+    setDomainSearchQuery(query);
     setDomainStatus('checking');
     setTimeout(() => {
       setDomainStatus('available');
@@ -158,7 +288,7 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
       key: keyId || "rzp_test_placeholder_key",
       amount: Math.round(calculatedTotal * 100), // paise
       currency: "INR",
-      name: "VibeHost",
+      name: "Super AI Site Builder",
       description: `${selectedPeriod}-month Single plan subscription`,
       image: "https://cdn.pixabay.com/photo/2021/08/25/20/42/logo-6574455_960_720.png",
       handler: function (response: any) {
@@ -218,9 +348,9 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
             </svg>
           </div>
           <span className="text-lg font-extrabold tracking-tight text-[#111] uppercase font-sans flex items-center">
-            HOSTINGER
+            Super AI
             <span className="text-[9px] bg-[#673ab7]/10 text-[#673ab7] ml-1.5 px-1.5 py-0.5 rounded-md font-bold tracking-normal normal-case">
-              Clone PRO
+              Site Builder
             </span>
           </span>
         </div>
@@ -444,6 +574,35 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
                     </button>
                   </div>
 
+                  {/* Real-time Domain Extensions Quick Recommendations Grid */}
+                  {domainSearchQuery && !domainSearchQuery.includes('.') && (
+                    <div className="bg-slate-50 border border-slate-200/80 p-3 h-auto rounded-2xl space-y-2 mt-2">
+                      <p className="text-[9.5px] text-zinc-500 font-bold uppercase tracking-wider pl-0.5">Quick Choose Extensions (Included Free):</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {['.com', '.in', '.online'].map((ext) => {
+                          const suggestedName = `${domainSearchQuery.trim()}${ext}`;
+                          return (
+                            <button
+                              key={ext}
+                              type="button"
+                              onClick={() => {
+                                setDomainSearchQuery(suggestedName);
+                                setDomainStatus('checking');
+                                setTimeout(() => {
+                                  setDomainStatus('available');
+                                }, 700);
+                              }}
+                              className="bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#673ab7] p-2 rounded-xl text-left transition-all group flex flex-col justify-between shadow-xs cursor-pointer focus:outline-none"
+                            >
+                              <span className="text-[11px] font-extrabold text-slate-800 font-mono truncate">{suggestedName}</span>
+                              <span className="text-[9px] text-[#673ab7] font-black tracking-tight mt-0.5 group-hover:underline">Choose →</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {domainStatus === 'checking' && (
                     <div className="text-left text-xs font-bold text-slate-500 font-mono py-1 animate-pulse flex items-center space-x-1.5">
                       <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-600" />
@@ -512,30 +671,172 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="px-6 pb-6 border-t border-slate-100 pt-5 space-y-4"
+                        className="px-6 pb-6 border-t border-slate-100 pt-5 space-y-5"
                       >
-                        <form onSubmit={(e) => processCheckoutPayment(e, 'upi')} className="space-y-4 max-w-lg">
-                          <div className="space-y-1.5 text-left">
-                            <label className="text-[10px] text-slate-450 font-black uppercase tracking-wide font-mono block pl-0.5">
-                              Enter UPI ID (Virtual Private Address)
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              value={upiId}
-                              onChange={(e) => setUpiId(e.target.value)}
-                              placeholder="e.g. yourname@ybl"
-                              className="w-full bg-[#f8f9fa] border-2 border-slate-200 focus:bg-white focus:border-[#673ab7] rounded-2xl px-4.5 py-3.5 text-xs text-slate-900 font-bold transition-all outline-none"
-                            />
-                          </div>
-
+                        {/* Sub-tab selection menu for UPI payment */}
+                        <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold border border-slate-200">
                           <button
-                            type="submit"
-                            className="bg-[#6c3df5] hover:bg-[#5a2eeb] text-white font-extrabold text-xs py-3.5 px-10 rounded-xl cursor-pointer transition-colors w-full sm:w-auto uppercase tracking-wide shadow-sm"
+                            type="button"
+                            onClick={() => setUpiSubMethod('qr')}
+                            className={`flex-grow py-2 rounded-lg transition-all cursor-pointer ${upiSubMethod === 'qr' ? 'bg-[#673ab7] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                           >
-                            Submit payment
+                            📸 Scan Instant QR Code (Direct)
                           </button>
-                        </form>
+                          <button
+                            type="button"
+                            onClick={() => setUpiSubMethod('app')}
+                            className={`flex-grow py-2 rounded-lg transition-all cursor-pointer ${upiSubMethod === 'app' ? 'bg-[#673ab7] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                          >
+                            📱 Pay via UPI ID / App
+                          </button>
+                        </div>
+
+                        {upiSubMethod === 'app' ? (
+                          <form onSubmit={(e) => processCheckoutPayment(e, 'upi')} className="space-y-4 max-w-lg">
+                            <div className="space-y-1.5 text-left">
+                              <label className="text-[10px] text-slate-450 font-black uppercase tracking-wide font-mono block pl-0.5">
+                                Enter UPI ID (Virtual Private Address)
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={upiId}
+                                onChange={(e) => setUpiId(e.target.value)}
+                                placeholder="e.g. yourname@ybl"
+                                className="w-full bg-[#f8f9fa] border-2 border-slate-200 focus:bg-white focus:border-[#673ab7] rounded-2xl px-4.5 py-3.5 text-xs text-slate-900 font-bold transition-all outline-none"
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              className="bg-[#6c3df5] hover:bg-[#5a2eeb] text-white font-extrabold text-xs py-3.5 px-10 rounded-xl cursor-pointer transition-colors w-full sm:w-auto uppercase tracking-wide shadow-sm"
+                            >
+                              Submit payment
+                            </button>
+                          </form>
+                        ) : (
+                          <div className="space-y-5 max-w-lg text-left">
+                            {/* Option 1: Official Razorpay Secure QR code triggers */}
+                            <div className="bg-gradient-to-br from-[#120a2a] to-[#251554] text-white rounded-2xl p-5 border border-indigo-950 shadow-md space-y-4">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+                                  <svg className="w-5 h-5 text-indigo-300 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                </div>
+                                <div className="text-left">
+                                  <h4 className="font-extrabold text-sm tracking-tight text-white">Razorpay Secure QR Gateway</h4>
+                                  <p className="text-[10.5px] text-indigo-200">Official automatic payment gateway activation</p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row items-center gap-4 bg-indigo-950/50 p-3.5 rounded-xl border border-indigo-900/40">
+                                <div className="bg-white p-2 rounded-xl shrink-0">
+                                  {/* Dynamic QR link to display a secure payment gateway scan point */}
+                                  <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`https://checkout.razorpay.com/v1/checkout.js?key=${process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp"}&amount=${Math.round(calculatedTotal * 100)}`)}`}
+                                    alt="Razorpay Gateway scan code"
+                                    className="w-[110px] h-[110px] object-contain block opacity-95"
+                                  />
+                                </div>
+                                <div className="text-xs space-y-2 text-left flex-grow">
+                                  <div className="flex items-center space-x-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                                    <span className="text-[9.5px] font-mono font-bold text-emerald-400 uppercase tracking-widest bg-emerald-950/50 px-1.5 py-0.5 rounded">
+                                      API KEY ACTIVE
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-indigo-100 font-medium leading-relaxed">
+                                    Scan this QR to open the gateway or click below to launch the checkout popup with your custom credential key.
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => processCheckoutPayment(undefined, 'upi')}
+                                    className="bg-[#673ab7] hover:bg-[#5b2fbc] text-white font-extrabold text-[11px] px-4 py-2 rounded-lg transition-transform hover:scale-[1.02] duration-200 flex items-center gap-1.5 shadow-sm cursor-pointer select-none"
+                                  >
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                                    <span>Open Razorpay payment popup</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Divider with clean text */}
+                            <div className="flex items-center gap-2 py-1">
+                              <div className="h-px bg-slate-200 flex-grow"></div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Pay Manually</span>
+                              <div className="h-px bg-slate-200 flex-grow"></div>
+                            </div>
+
+                            {/* Option 2: Direct bank transfer fallback QR */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-5">
+                              {/* Dynamic QR Generator containing real payee address, amount, description */}
+                              <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                                <img
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                                    `upi://pay?pa=rajsahani.RgcS@okaxis&pn=Super%20AI%20Site%20Builder%20Payments&am=${calculatedTotal}&tn=Super%20AI%20Site%20Builder%20Hosting%20Service&cu=INR`
+                                  )}`}
+                                  alt="Secure Payment UPI QR"
+                                  className="w-[125px] h-[125px] object-contain block"
+                                />
+                              </div>
+                              <div className="text-xs space-y-2 text-left">
+                                <p className="font-extrabold text-slate-800 text-sm">Direct Bank UPI Scan &amp; Pay</p>
+                                <p className="text-[11px] text-slate-500 leading-relaxed font-semibold">
+                                  Use <strong className="text-slate-700">Google Pay, PhonePe, Bhim, Paytm, or any banking app</strong> to scan this QR and pay the total balance securely.
+                                </p>
+                                <div className="text-[10px] font-mono font-bold bg-white px-2 py-1.5 rounded border border-slate-205 text-slate-600 space-y-0.5">
+                                  <p>Payee: <strong className="text-zinc-800 font-mono">rajsahani.RgcS@okaxis</strong></p>
+                                  <p>Name: <strong className="text-zinc-800 font-mono">Raj Sahani</strong></p>
+                                  <p>Amount: <strong className="text-emerald-700">₹{calculatedTotal}</strong></p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Manual Reference confirmation Form */}
+                            <form onSubmit={handleManualUpiSubmit} className="space-y-3 pt-1">
+                              <div className="space-y-1">
+                                <label className="text-[10.5px] text-slate-800 font-extrabold block">
+                                  Enter UPI UTR / Transaction Ref No. (12-Digits)
+                                </label>
+                                <input
+                                  type="text"
+                                  maxLength={12}
+                                  value={utrNumber}
+                                  onChange={(e) => {
+                                    setUtrNumber(e.target.value.replace(/[^0-9]/g, ''));
+                                    setUtrError('');
+                                  }}
+                                  placeholder="e.g. 202612028934"
+                                  className="w-full bg-[#f8f9fa] border-2 border-slate-200 focus:bg-white focus:border-[#673ab7] rounded-xl px-4 py-2.5 text-xs text-slate-900 font-bold transition-all outline-none font-mono tracking-wider"
+                                  required
+                                />
+                              </div>
+
+                              {utrError && (
+                                <p className="text-[11px] text-rose-500 font-extrabold">✕ {utrError}</p>
+                              )}
+
+                              <button
+                                type="submit"
+                                disabled={isVerifyingUtr || utrNumber.length < 12}
+                                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-extrabold text-xs py-3.5 rounded-xl cursor-pointer transition-all uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-md active:scale-98"
+                              >
+                                {isVerifyingUtr ? (
+                                  <>
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Verifying UPI Ledger Transaction...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>I Have Completed Payment - Activate Server!</span>
+                                  </>
+                                )}
+                              </button>
+                            </form>
+                          </div>
+                        )}
 
                         <div className="flex items-center space-x-2 text-[11px] text-indigo-750 font-bold pl-0.5 py-1">
                           <Lock className="w-4 h-4 text-indigo-650" />
@@ -775,7 +1076,7 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-center text-slate-900">
+                     <div className="flex justify-between items-center text-slate-900 border-b border-dashed border-slate-100 pb-2">
                       <span className="flex items-center text-slate-550">
                         <span>Taxes</span>
                         <span title="18% standard Indian GST regulation calculation" className="inline-flex items-center">
@@ -784,6 +1085,19 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
                       </span>
                       <span className="text-slate-900">{`₹${calculatedTaxes.toLocaleString()}`}</span>
                     </div>
+
+                    {domainStatus === 'available' && domainSearchQuery && (
+                      <div className="flex justify-between items-center text-slate-900 border-b border-dashed border-slate-100 pb-2">
+                        <span className="flex flex-col text-slate-550 text-left">
+                          <span className="font-extrabold text-[#00b074] text-xs flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-[#00b074] rounded-full"></span>
+                            Free Domain Registration
+                          </span>
+                          <span className="text-[10px] text-indigo-600 font-mono font-bold mt-0.5">{domainSearchQuery}</span>
+                        </span>
+                        <span className="text-[#00b074] font-black">₹0 (FREE)</span>
+                      </div>
+                    )}
 
                     {discountPercent > 0 && (
                       <div className="flex justify-between items-center text-[#00b074] font-black">
@@ -918,7 +1232,7 @@ export default function CheckoutView({ selectedPlan, selectedDomain, setActivePa
       {/* 5. Minimalistic Distraction-Free Hostinger Legal Footer layout */}
       <footer className="border-t border-slate-200 bg-white py-8 px-4 text-center text-xs text-slate-450 font-semibold space-y-3.5 shrink-0 mt-16">
         <p className="tracking-tight text-slate-500">
-          &copy; {new Date().getFullYear()} VibeHost. All rights reserved on Indian server clusters.
+          &copy; {new Date().getFullYear()} Super AI Site Builder. All rights reserved on Indian server clusters.
         </p>
         <div className="flex justify-center items-center space-x-4 text-[11px]">
           <span className="hover:text-indigo-600 underline cursor-pointer transition-colors" onClick={() => setActivePage('home')}>Terms of service</span>

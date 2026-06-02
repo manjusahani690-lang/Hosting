@@ -25,7 +25,7 @@ const blogs = [
     tag: 'Infrastructure'
   },
   {
-    title: 'Prompt Modeling: Getting Better Layouts out of Gemini API',
+    title: 'Prompt Modeling: Getting Better Layouts out of Super AI API',
     desc: 'A comprehensive engineering guide on configuring structured schema parameters to get clean responsive Tailwind codes instantly.',
     author: 'AI Evangelist, Sarah Jenkins',
     date: 'April 30, 2026',

@@ -13,17 +13,29 @@ interface DashboardViewProps {
   selectedPlan?: any;
   setSelectedPlan?: (plan: any) => void;
   userEmail?: string;
+  setActivePage?: (page: string) => void;
 }
 
 export default function DashboardView({
   selectedPlan = null,
   setSelectedPlan = () => {},
-  userEmail = 'rajsahani.RgcS@gmail.com'
+  userEmail = 'rajsahani.RgcS@gmail.com',
+  setActivePage = () => {}
 }: DashboardViewProps) {
   const [activeTab, setActiveTab ] = useState<'sites' | 'wordpress' | 'ai' | 'security' | 'terminal' | 'domain' | 'billing'>('billing');
   
   // Custom states for purchased plans and automated 3-day notifications
   const [activeUserPlan, setActiveUserPlan] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      const persistedPlan = localStorage.getItem('vibe_active_user_plan');
+      if (persistedPlan) {
+        try {
+          return JSON.parse(persistedPlan);
+        } catch (e) {
+          console.error("Failed to parse persisted plan", e);
+        }
+      }
+    }
     if (selectedPlan && selectedPlan.name) {
       return {
         name: selectedPlan.name,
@@ -49,10 +61,87 @@ export default function DashboardView({
     };
   });
 
+  const [vibeCredits, setVibeCredits] = useState<number>(10);
+
+  // Sync with vibe_customers database matching active customer email
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const syncCredits = () => {
+        const storedCustomers = localStorage.getItem('vibe_customers');
+        if (storedCustomers) {
+          try {
+            const parsed = JSON.parse(storedCustomers);
+            const currentCust = parsed.find((c: any) => c.email.toLowerCase() === userEmail.toLowerCase());
+            if (currentCust && currentCust.vibeCredits !== undefined) {
+              setVibeCredits(currentCust.vibeCredits);
+              localStorage.setItem('hosting_ai_builder_credits', currentCust.vibeCredits.toString());
+            } else {
+              const legacyCreds = localStorage.getItem('hosting_ai_builder_credits');
+              if (legacyCreds) {
+                setVibeCredits(parseInt(legacyCreds, 10));
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          const legacyCreds = localStorage.getItem('hosting_ai_builder_credits');
+          if (legacyCreds) {
+            setVibeCredits(parseInt(legacyCreds, 10));
+          }
+        }
+      };
+
+      syncCredits();
+      window.addEventListener('storage', syncCredits);
+      return () => window.removeEventListener('storage', syncCredits);
+    }
+  }, [userEmail]);
+
+  const updateVibeCreditsBothPlaces = (newCredits: number) => {
+    setVibeCredits(newCredits);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hosting_ai_builder_credits', newCredits.toString());
+      
+      const storedCustomers = localStorage.getItem('vibe_customers');
+      if (storedCustomers) {
+        try {
+          const parsed = JSON.parse(storedCustomers);
+          // If customer not found, push them
+          const exist = parsed.some((c: any) => c.email.toLowerCase() === userEmail.toLowerCase());
+          let updated;
+          if (exist) {
+            updated = parsed.map((c: any) => {
+              if (c.email.toLowerCase() === userEmail.toLowerCase()) {
+                return { ...c, vibeCredits: newCredits };
+              }
+              return c;
+            });
+          } else {
+            updated = [...parsed, {
+              id: `usr-${101 + parsed.length}`,
+              name: userEmail.split('@')[0],
+              email: userEmail,
+              plan: activeUserPlan?.name || 'AI Premium Cloud',
+              status: 'active',
+              domain: 'rajsahani.in',
+              cpuUsed: 12,
+              vibeCredits: newCredits
+            }];
+          }
+          localStorage.setItem('vibe_customers', JSON.stringify(updated));
+          window.dispatchEvent(new Event('storage'));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  };
+
   const [notificationDispatched, setNotificationDispatched] = useState<boolean>(true);
   const [automaticAlertLogs, setAutomaticAlertLogs] = useState<string[]>([
     `[AUTO-SCHEDULER] Detected plan '${activeUserPlan?.name || 'AI Premium Cloud'}' expiration date approaching standard boundaries (3 days left).`,
-    `[TRANS-ALERT-SMS] SMS notification on mobile +91 91100 02026 triggered successfully: "Your VibeHost ${activeUserPlan?.name || 'AI Premium Cloud'} plan ends in 3 days. Renew now to avoid auto-deletion."`,
+    `[TRANS-ALERT-SMS] SMS notification on mobile +91 91100 02026 triggered successfully: "Your Super AI Site Builder ${activeUserPlan?.name || 'AI Premium Cloud'} plan ends in 3 days. Renew now to avoid auto-deletion."`,
     `[TRANS-ALERT-MAIL] SMTP relay successfully sent full renewal catalog to '${userEmail}' with 1-Click Razorpay UPI QR instructions.`
   ]);
 
@@ -68,6 +157,61 @@ export default function DashboardView({
     'WAF firewall activated // Global transit slots open.'
   ]);
   const [restarting, setRestarting] = useState(false);
+
+  // --- External Domains List & Connector States ---
+  const [connectedDomains, setConnectedDomains] = useState<any[]>([
+    { name: 'rajsahani-wp.superai-builder.com', type: 'WordPress', registrar: 'Super AI', status: 'connected', ssl: true, ip: '103.86.177.30' }
+  ]);
+  const [wpInstallDomain, setWpInstallDomain] = useState('rajsahani-wp.superai-builder.com');
+  const [extDomainInput, setExtDomainInput] = useState('');
+  const [extRegistrar, setExtRegistrar] = useState('GoDaddy');
+  const [isMappingDomain, setIsMappingDomain] = useState(false);
+  const [mapSuccessMsg, setMapSuccessMsg] = useState('');
+  const [mapErrorMsg, setMapErrorMsg] = useState('');
+  const [dnsLogs, setDnsLogs] = useState<string[]>([]);
+
+  const handleConnectExternalDomain = () => {
+    const rawVal = extDomainInput.trim().toLowerCase();
+    if (!rawVal) return;
+    
+    // Quick validation
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
+    if (!domainRegex.test(rawVal)) {
+      setMapErrorMsg("✕ Invalid domain structure. Use format like 'yourdomain.com' or 'business.in'.");
+      return;
+    }
+
+    setIsMappingDomain(true);
+    setMapSuccessMsg('');
+    setMapErrorMsg('');
+    setDnsLogs(['Contacting external Root NS servers...']);
+
+    const queryLogs = [
+      `Fetching current DNS records for ${rawVal}...`,
+      `Validating nameservers & mapping via ${extRegistrar}...`,
+      `Success: Detected A-Record pointing to Dallas server cluster IP!`,
+      `Writing Nginx virtual network sandbox node block for ${rawVal}...`,
+      `Provisioning dynamic Let's Encrypt SHA-256 certificate...`,
+      `WAF Firewall reverse proxy configured gracefully. Domain mapped and ready!`
+    ];
+
+    queryLogs.forEach((logVal, index) => {
+      setTimeout(() => {
+        setDnsLogs(prev => [...prev, logVal]);
+        if (index === queryLogs.length - 1) {
+          setIsMappingDomain(false);
+          setConnectedDomains(prev => [
+            ...prev,
+            { name: rawVal, type: 'Custom Domain', registrar: extRegistrar, status: 'connected', ssl: true, ip: '103.86.177.30' }
+          ]);
+          setWpInstallDomain(rawVal); // Default wordpress installation domain
+          setMapSuccessMsg(`✓ Success! ${rawVal} connected and hosted on Super AI Site Builder server securely in 1-Click! Free SSL has been active and WordPress is ready to compile on it.`);
+          setTerminalLogs(prev => [...prev, `Domain mapped successfully: connected external domain '${rawVal}' via A-record`]);
+          setExtDomainInput('');
+        }
+      }, (index + 1) * 700);
+    });
+  };
 
   // --- Domain Registry / Domicile Tab States ---
   const [dbSearchQuery, setDbSearchQuery] = useState('');
@@ -120,6 +264,32 @@ export default function DashboardView({
 
       const data = await response.json();
       if (response.ok && data.results) {
+        if (data.directMatches) {
+          const formattedDirect = data.directMatches.map((r: any) => {
+            let localPrice = r.price || '₹699/yr';
+            if (localPrice.includes('$')) {
+              const num = parseFloat(localPrice.replace(/[^0-9.]/g, ''));
+              if (!isNaN(num)) {
+                if (r.tld === '.com') localPrice = '₹699/yr';
+                else if (r.tld === '.in') localPrice = '₹399/yr';
+                else if (r.tld === '.co.in') localPrice = '₹299/yr';
+                else if (r.tld === '.net') localPrice = '₹849/yr';
+                else if (r.tld === '.ai') localPrice = '₹4,999/yr';
+                else if (r.tld === '.org') localPrice = '₹799/yr';
+                else if (r.tld === '.online') localPrice = '₹79/yr';
+                else localPrice = `₹${Math.round(num * 83)}/yr`;
+              }
+            }
+            return {
+              name: r.name,
+              status: r.status,
+              price: localPrice,
+              badges: r.badges
+            };
+          });
+          setDbDirectMatches(formattedDirect);
+        }
+
         const formattedAi = data.results.map((r: any) => {
           let localPrice = r.price || '₹699/yr';
           if (localPrice.includes('$')) {
@@ -169,7 +339,7 @@ export default function DashboardView({
   const [wpProgress, setWpProgress] = useState(0);
   const [wpProgressLogs, setWpProgressLogs] = useState<string[]>([]);
   
-  const [wpSiteName, setWpSiteName] = useState('My VibeHost Blog');
+  const [wpSiteName, setWpSiteName] = useState('My Super AI Blog');
   const [wpAdminUser, setWpAdminUser] = useState('admin');
   const [wpAdminPass, setWpAdminPass] = useState('Wp_Admin_Secure_2026!');
   const [wpAdminEmail, setWpAdminEmail] = useState('rajsahani.RgcS@gmail.com');
@@ -178,8 +348,8 @@ export default function DashboardView({
 
   // WordPress posts state (for mini dashboard preview / playground)
   const [wpPosts, setWpPosts] = useState([
-    { id: 1, title: 'नमस्ते वर्डप्रेस! (Welcome to WP)', content: 'This is your first post in WordPress. Custom written and optimized for VibeHost cloud clusters! Edit or write something new today.', date: 'June 2, 2026' },
-    { id: 2, title: 'VibeHost Cloud Hosting Speed Mastery', content: 'Our state-of-the-art solid-state LiteSpeed enterprise stacks maintain WordPress query responses within 42ms. Absolute speed!', date: 'June 2, 2026' }
+    { id: 1, title: 'नमस्ते वर्डप्रेस! (Welcome to WP)', content: 'This is your first post in WordPress. Custom written and optimized for Super AI Site Builder cloud clusters! Edit or write something new today.', date: 'June 2, 2026' },
+    { id: 2, title: 'Super AI Cloud Hosting Speed Mastery', content: 'Our state-of-the-art solid-state LiteSpeed enterprise stacks maintain WordPress query responses within 42ms. Absolute speed!', date: 'June 2, 2026' }
   ]);
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
@@ -223,6 +393,13 @@ export default function DashboardView({
         if (step.prg === 100) {
           setWpInstalling(false);
           setWpInstalled(true);
+          // Update the specific domain type to WordPress in active list
+          setConnectedDomains(prev => prev.map(d => {
+            if (d.name === wpInstallDomain) {
+              return { ...d, type: 'WordPress' };
+            }
+            return d;
+          }));
         }
       }, (index + 1) * 1200);
     });
@@ -246,11 +423,11 @@ export default function DashboardView({
     setTerminalLogs(prev => [...prev, `WordPress: New blog post published: "${newPost.title}"`]);
   };
 
-  // Handler to let Gemini write a blog post automatically based on a prompt
+  // Handler to let Super AI write a blog post automatically based on a prompt
   const handleWpAiGeneratePost = async () => {
     if (!wpPostPrompt.trim() || wpGeneratingPost) return;
     setWpGeneratingPost(true);
-    setTerminalLogs(prev => [...prev, `WordPress AI Draft: Querying Gemini for "${wpPostPrompt}"...`]);
+    setTerminalLogs(prev => [...prev, `WordPress AI Draft: Querying Super AI for "${wpPostPrompt}"...`]);
 
     try {
       const systemGuide = "Develop a high-converting, friendly, and structured blog post on this topic. If the topic is in Hindi or requested in Hindi, write it beautifully in Hinglish or pure Hindi. Include a creative title and paragraphs.";
@@ -276,7 +453,7 @@ export default function DashboardView({
           if (parsed.content) content = parsed.content;
         } catch (e) {
           // fallback in case it's not JSON
-          console.warn("Could not parse JSON from Gemini, using raw text", e);
+          console.warn("Could not parse JSON from Super AI, using raw text", e);
         }
 
         setNewPostTitle(title);
@@ -284,7 +461,7 @@ export default function DashboardView({
         setWpPostPrompt('');
         setTerminalLogs(prev => [...prev, `WordPress AI Draft: Successfully generated blog post titled "${title}"`]);
       } else {
-        alert("Could not access Gemini to write the post. We'll use a fast placeholder!");
+        alert("Could not access Super AI to write the post. We'll use a fast placeholder!");
         setNewPostTitle(`Beautiful Insights on ${wpPostPrompt}`);
         setNewPostContent(`Here is some custom professional content generated for "${wpPostPrompt}" to help you jumpstart your WordPress blog.`);
       }
@@ -303,6 +480,13 @@ export default function DashboardView({
       setWpInstalled(false);
       setWpProgress(0);
       setWpProgressLogs([]);
+      // Reset specific domain back to Custom Domain in structural lists
+      setConnectedDomains(prev => prev.map(d => {
+        if (d.name === wpInstallDomain) {
+          return { ...d, type: 'Custom Domain' };
+        }
+        return d;
+      }));
       setTerminalLogs(prev => [...prev, `WordPress database tables '<sup>' and core directory truncated successfully.`]);
     }
   };
@@ -340,6 +524,11 @@ export default function DashboardView({
     e.preventDefault();
     if (!promptInput.trim()) return;
 
+    if (vibeCredits <= 0) {
+      alert("✕ You have run out of Vibe Credits! Claim +5 Vibe Credits from the Subscription/Billing page or renew your subscription to top up.");
+      return;
+    }
+
     setAiGenerating(true);
     setOutline(null);
 
@@ -352,7 +541,13 @@ export default function DashboardView({
       const data = await response.json();
       if (response.ok && data.website) {
         setOutline(data.website);
-        setTerminalLogs(prev => [...prev, `AI Website Generator: Processed design draft for '${promptInput}'`]);
+        // Spend 1 Vibe credit
+        const newCreds = vibeCredits - 1;
+        updateVibeCreditsBothPlaces(newCreds);
+        setTerminalLogs(prev => [
+          ...prev, 
+          `AI Website Generator: Successfully compiled draft colorways and UI blueprint for "${promptInput}". Spend 1 Vibe Credit. (Remaining Balance: ${newCreds})`
+        ]);
       } else {
         alert('Ecosystem AI builder error inside panel.');
       }
@@ -446,6 +641,118 @@ export default function DashboardView({
           </motion.div>
         )}
 
+        {/* --- ALL-INCLUSIVE CUSTOMER PRE-CONFIGURED SUCCESS PLATFORM (सब कुछ रेडी है!) --- */}
+        <div className="bg-gradient-to-br from-indigo-900 via-[#1a0a3a] to-[#0a0518] rounded-[2rem] p-6.5 sm:p-8 text-white space-y-6 relative overflow-hidden border border-indigo-500/20 shadow-2xl">
+          {/* Decorative network nodes in background */}
+          <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-12 -translate-y-12">
+            <svg className="w-[300px] h-[300px] text-white" viewBox="0 0 100 100" fill="none">
+              <circle cx="50" cy="50" r="30" stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3" />
+              <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" />
+              <line x1="10" y1="10" x2="90" y2="90" stroke="currentColor" strokeWidth="0.5" />
+            </svg>
+          </div>
+
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 border-b border-white/10 pb-5">
+            <div className="space-y-1">
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg px-2.5 py-1 text-[10px] font-black tracking-widest uppercase font-mono">
+                100% Fully Managed Ecosystem Active
+              </span>
+              <h2 className="text-xl sm:text-2xl font-display font-black tracking-tight mt-1 flex items-center gap-2">
+                <span>Everything is Ready & Configure Customized!</span>
+                <span className="text-emerald-400">✓ Active</span>
+              </h2>
+              <p className="text-xs text-indigo-200 font-semibold max-w-2xl">
+                इस प्लान के साथ आपको सब कुछ बिलकुल रेडी और चालू मिलता है। आपको कोई भी टेक्निकल काम जैसे डेटाबेस बनाना, SSL इंस्टॉल करना या डोमेन मैप करना खुद से नहीं करना पड़ेगा - हमारी सुपर AI प्रणाली सब कुछ आटोमेटिक कॉन्फ़िगर कर चुकी है!
+              </p>
+            </div>
+            
+            <div className="bg-emerald-500/10 border border-emerald-400/20 px-4 py-3 rounded-2xl shrink-0 flex items-center gap-3">
+              <div className="w-2 md:w-2.5 h-2 md:h-2.5 bg-emerald-400 rounded-full animate-ping shrink-0" />
+              <div className="text-left font-mono">
+                <span className="text-[9px] text-slate-350 block leading-none">VIBE STATUS</span>
+                <span className="text-xs font-bold text-white leading-none block mt-1">Ready to Deploy</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Grid of Ready-made pre-installed items on the purchased layout */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
+            
+            {/* Item 1: Free Domain */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Domain Registered</span>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">FREE & CONFIGURED</span>
+              </div>
+              <h5 className="font-bold text-sm tracking-tight text-white leading-none">Domain Mapping System</h5>
+              <p className="text-[11px] text-zinc-300 leading-normal">
+                आपका प्रीमियम डोमेन <strong className="text-emerald-300 font-mono select-all text-xs">{wpInstallDomain}</strong> आटोमेटिक सर्वर क्लस्टर से जोड़कर SSL सक्रिय कर दिया गया है।
+              </p>
+            </div>
+
+            {/* Item 2: Free Unlimited Auto SSL */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Security Standard</span>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">HTTPS ENFORCED</span>
+              </div>
+              <h5 className="font-bold text-sm tracking-tight text-white leading-none">Free Unlimited Wildcard SSL</h5>
+              <p className="text-[11px] text-zinc-300 leading-normal">
+                Let&apos;s Encrypt SSL सर्टिफिकेट तुरंत और आटोमेटिक इंस्टॉल हो चुका है। आपका ट्रैफ़िक 256-bit मिलिट्री ग्रेड एन्क्रिप्शन के साथ पूरी तरह सुरक्षित है।
+              </p>
+            </div>
+
+            {/* Item 3: WordPress Auto Engine Ready */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Framework Suite</span>
+                <span className="text-[9px] bg-indigo-500/30 text-indigo-200 font-bold px-2 py-0.5 rounded-md">WP 1-CLICK INSTANT</span>
+              </div>
+              <h5 className="font-bold text-sm tracking-tight text-white leading-none">WordPress & MySQL Database</h5>
+              <p className="text-[11px] text-zinc-300 leading-normal">
+                WordPress की फाइलें और डेटाबेस सर्वर पहले से ही बैकेंड में ऑप्टिमाइज़ कर लिए गए हैं। बिना किसी कोडिंग के 1-क्लिक में वर्डप्रेस लाइव कर सकते हैं!
+              </p>
+            </div>
+
+            {/* Item 4: Cloudflare CDN active */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Speed Optimizer</span>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">CDN RAM CACHING</span>
+              </div>
+              <h5 className="font-bold text-sm tracking-tight text-white leading-none">LiteSpeed & CDN Edge Ready</h5>
+              <p className="text-[11px] text-zinc-300 leading-normal">
+                410+ ग्लोबल एज लोकेशन्स पर CDN सक्रिय किया जा चुका है ताकि भारत और दुनिया भर के ग्राहकों के लिए आपकी वेबसाइट मात्र 42ms में लोड हो सके!
+              </p>
+            </div>
+
+            {/* Item 5: Professional Corporate Mailbox */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Business Email</span>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">UNLIMITED ACTIVE</span>
+              </div>
+              <h5 className="font-bold text-sm tracking-tight text-white leading-none">DKIM & SPF Mail Server</h5>
+              <p className="text-[11px] text-zinc-300 leading-normal">
+                आपकी कंपनी के नाम पर प्रोफेशनल ईमेल (जैसे sales@yourdomain) आटोमेटिक सेटअप हो चुकी है, जिससे आपके मेल थेट स्पैम फोल्डर में नहीं, इनबॉक्स में जायेंगे।
+              </p>
+            </div>
+
+            {/* Item 6: Daily Snapshots System */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4.5 space-y-2 hover:bg-white/10 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-200 uppercase tracking-widest font-bold">Data Redundancy</span>
+                <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-md">DAILY SNAPSHOTS ON</span>
+              </div>
+              <h5 className="font-bold text-sm tracking-tight text-white leading-none">Auto Cloud Backup Vault</h5>
+              <p className="text-[11px] text-zinc-300 leading-normal">
+                रोज़ाना बैकअप लेने की चिंता समाप्त! आपका सर्वर आटोमेटिक तौर पर हर रात बैकअप स्टोर करता है, जिसे आप 1-क्लिक में कभी भी रीस्टोर कर सकते हैं।
+              </p>
+            </div>
+
+          </div>
+        </div>
+
         {/* Dynamic section split gridding */}
         <div className="grid grid-cols-12 gap-8 items-start">
           
@@ -521,6 +828,30 @@ export default function DashboardView({
             </button>
           </div>
 
+          {/* 5vibe Credits Floating Widget */}
+          <div className="bg-gradient-to-br from-[#120a2a] via-[#150937] to-brand-purple p-4 rounded-2xl text-left border border-white/10 mt-5 space-y-3 shadow-lg relative overflow-hidden">
+            <div className="absolute right-[-10px] top-[-10px] opacity-10 font-bold font-mono text-[60px] leading-none text-white select-none">5V</div>
+            <div className="flex justify-between items-center">
+              <span className="text-[9px] text-purple-200 font-extrabold tracking-widest uppercase font-mono">5Vibe Credit Balance</span>
+              <span className="bg-emerald-500/20 text-emerald-300 text-[8px] font-black tracking-wider uppercase px-2 py-0.5 rounded animate-pulse">Active</span>
+            </div>
+            <div>
+              <p className="font-mono font-black text-white text-xl tracking-tight pr-5">{vibeCredits} Credits</p>
+              <p className="text-[10px] text-purple-200/70 mt-1 leading-normal">
+                Spend credits to instantly vibe-code and deploy custom designed web spaces on your domains.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setActiveTab('ai');
+                setTerminalLogs(prev => [...prev, `AI Sandbox configured: Accessing dynamic generative routes using Vibe Credit`]);
+              }}
+              className="w-full bg-white text-[#120a2a] hover:bg-slate-50 transition-colors py-2 rounded-xl text-[10px] font-black uppercase text-center cursor-pointer shadow-sm active:scale-98"
+            >
+              🚀 Spend Credits in AI Sandbox
+            </button>
+          </div>
+
           {/* Right tab contents viewport */}
           <div className="col-span-12 lg:col-span-9 bg-white p-6.5 sm:p-8 rounded-3xl border border-slate-200 shadow-sm text-left">
             
@@ -529,6 +860,34 @@ export default function DashboardView({
                 <h3 className="font-display font-extrabold text-base text-slate-900 border-b border-slate-100 pb-2">
                   Ecosystem Web Hosting Configuration
                 </h3>
+
+                {/* WordPress Quick Action Banner */}
+                <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-[#120a2a] rounded-3xl p-6 text-white space-y-4 relative overflow-hidden shadow-md">
+                  <div className="absolute right-0 bottom-0 opacity-10 select-none pointer-events-none transform translate-y-6 translate-x-6">
+                    <span className="text-[120px] font-mono font-black text-white leading-none">W</span>
+                  </div>
+                  <div className="space-y-1.5 max-w-lg">
+                    <span className="bg-blue-500/30 text-blue-105 border border-blue-400/30 rounded-lg px-2.5 py-1 text-[10px] font-extrabold tracking-wider uppercase font-mono">Recommended Framework</span>
+                    <h4 className="text-xl font-display font-black tracking-tight flex items-center gap-2">
+                      Need a professional blog or corporate website?
+                    </h4>
+                    <p className="text-xs text-indigo-150 leading-relaxed font-semibold">
+                      Install WordPress instantly on any of your connected domain paths with optimized LiteSpeed web server modules and security guard configurations.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                    <button
+                      onClick={() => {
+                        setActiveTab('wordpress');
+                        setTerminalLogs(prev => [...prev, `WordPress Auto-Installer interface selected globally from Setup Promo Banner`]);
+                      }}
+                      className="px-6 py-3 bg-white text-[#21759b] hover:bg-slate-50 font-black rounded-xl text-xs tracking-wide transition-all shadow-md text-center active:scale-98 cursor-pointer"
+                    >
+                      🚀 Setup WordPress in 1-Click
+                    </button>
+                    <span className="text-[10px] text-indigo-200 font-mono text-center sm:text-left">No database knowledge or coding required!</span>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
                   
@@ -595,6 +954,177 @@ export default function DashboardView({
                   </button>
                 </div>
 
+                {/* Connected Websites & Domains list */}
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-6 space-y-4 text-left mt-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="font-extrabold text-sm text-[#111] tracking-tight">Active Connected Sites & Domains ({connectedDomains.length})</h4>
+                    <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">Fully Managed</span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {connectedDomains.map((dom) => (
+                      <div key={dom.name} className="p-3.5 bg-slate-50 border border-slate-150/60 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 font-semibold text-xs text-slate-600">
+                        <div className="flex items-start gap-2.5">
+                          <div className="h-2 w-2 rounded-full bg-emerald-500 mt-1.5 animate-pulse shrink-0" />
+                          <div>
+                            <p className="font-mono text-xs sm:text-sm font-black text-slate-800">{dom.name}</p>
+                            <p className="text-[10.5px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
+                              <span>Type: <strong className="text-slate-700">{dom.type}</strong></span>
+                              <span>&bull;</span>
+                              <span>Registrar: <strong className="text-slate-700">{dom.registrar}</strong></span>
+                              <span>&bull;</span>
+                              <span>IP: <strong className="text-slate-700 font-mono">{dom.ip}</strong></span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 justify-end">
+                          {dom.ssl && (
+                            <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-bold px-2 py-1 rounded-lg uppercase flex items-center gap-1 shrink-0">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              Secure SSL
+                            </span>
+                          )}
+                          {dom.type !== 'WordPress' ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setWpInstallDomain(dom.name);
+                                  setActiveTab('wordpress');
+                                  setTerminalLogs(prev => [...prev, `WordPress Auto-Installer configured: targeted domain set to '${dom.name}'`]);
+                                }}
+                                className="text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100/80 px-2.5 py-1.5 rounded-lg text-[10px] font-black tracking-wide cursor-pointer transition-colors"
+                              >
+                                🖨️ Install WordPress
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`Are you sure you want to disconnect ${dom.name}? This will disable hosting routes for this domain.`)) {
+                                    setConnectedDomains(prev => prev.filter(d => d.name !== dom.name));
+                                    setTerminalLogs(prev => [...prev, `DNS Mapping Disconnected: Removed custom routing for '${dom.name}'`]);
+                                    if (wpInstallDomain === dom.name) {
+                                      setWpInstallDomain('rajsahani-wp.superai-builder.com');
+                                    }
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100/60 p-1.5 rounded-lg text-[10px] font-black tracking-wide cursor-pointer transition-colors"
+                              >
+                                Disconnect
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setWpInstallDomain(dom.name);
+                                setActiveWpView('admin_home');
+                                setActiveTab('wordpress');
+                                setTerminalLogs(prev => [...prev, `Redirected to WordPress CMS Workspace for '${dom.name}'`]);
+                              }}
+                              className="text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wide cursor-pointer transition-colors"
+                            >
+                              ⚙️ Manage in WordPress CMS
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 1-Click External Domain Connector panel */}
+                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 md:p-6 space-y-4">
+                  <div>
+                    <h4 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                      <Plus className="w-4 h-4 text-brand-purple" /> Connect Domain Bought from Anywhere Else
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1">Connect your domain from GoDaddy, Namecheap, Hostinger, Bluehost, etc. inside 1-click.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono">Domain Name</label>
+                      <input 
+                        type="text"
+                        value={extDomainInput}
+                        onChange={(e) => {
+                          setExtDomainInput(e.target.value);
+                          setMapSuccessMsg('');
+                          setMapErrorMsg('');
+                        }}
+                        placeholder="e.g. rajsahani.in or mycustomsite.org"
+                        className="w-full bg-white border border-slate-205 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-brand-purple"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono">Bought From (Registrar)</label>
+                      <select 
+                        value={extRegistrar}
+                        onChange={(e) => setExtRegistrar(e.target.value)}
+                        className="w-full bg-white border border-slate-205 rounded-xl px-3 py-2.5 text-xs font-semibold focus:outline-none"
+                      >
+                        <option value="GoDaddy">GoDaddy</option>
+                        <option value="Namecheap">Namecheap</option>
+                        <option value="Hostinger">Hostinger</option>
+                        <option value="Freenom">Freenom</option>
+                        <option value="Google Domains">Google Domains</option>
+                        <option value="Other / Custom">Other / Custom</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* DNS Record requirements view */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 text-[11px] leading-relaxed space-y-3">
+                    <p className="font-bold text-slate-700">How to Connect? Setup A Record on your Registrar Panel:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200/50 font-mono">
+                      <div>
+                        <span className="text-slate-455 font-sans block text-[9px] uppercase font-bold">TYPE / HOST</span>
+                        <span className="font-extrabold text-slate-800">A / @</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-455 font-sans block text-[9px] uppercase font-bold">POINTS TO (IP ADDRESS)</span>
+                        <span className="font-extrabold text-indigo-600 select-all">103.86.177.30</span>
+                      </div>
+                    </div>
+                    <p className="text-slate-500 text-[10px] italic">Alternatively, you can change your Name Servers to: <strong className="text-slate-700">ns1.superai-builder.com</strong> and <strong className="text-slate-700">ns2.superai-builder.com</strong></p>
+                  </div>
+
+                  {isMappingDomain && (
+                    <div className="space-y-1 bg-slate-950 p-4 rounded-xl border border-slate-900 font-mono text-[9.5px] text-emerald-400 select-none">
+                      <p className="text-slate-550 border-b border-white/5 pb-1 uppercase font-bold">1-Click DNS Verification Engine</p>
+                      <div className="space-y-0.5">
+                        {dnsLogs.map((logStr, lIdx) => (
+                          <div key={lIdx}>&gt; {logStr}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {mapSuccessMsg && (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold font-sans">
+                      {mapSuccessMsg}
+                    </div>
+                  )}
+
+                  {mapErrorMsg && (
+                    <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-xs font-bold font-sans font-semibold">
+                      {mapErrorMsg}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleConnectExternalDomain}
+                    disabled={isMappingDomain || !extDomainInput.trim()}
+                    className="w-full bg-[#120a2a] hover:bg-brand-purple text-white transition-all py-3.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isMappingDomain ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>1-Click Connect &amp; Configure Hosting</span>
+                  </button>
+                </div>
+
                 {/* Databases stats block */}
                 <div className="border-t border-slate-100 pt-5 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-semibold text-slate-500">
                   <div className="flex items-center gap-1.5">
@@ -649,9 +1179,24 @@ export default function DashboardView({
                     </div>
 
                     <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-5 text-left">
-                      <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider font-mono">Site & Database Schema Settings</h4>
+                      <h4 className="font-bold text-xs text-slate-500 uppercase tracking-wider font-mono">Site &amp; Database Schema Settings</h4>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* Select Connected Domain */}
+                        <div className="space-y-1.5 col-span-1 md:col-span-2">
+                          <label className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono">Select Installation Domain / Site Path</label>
+                          <select
+                            value={wpInstallDomain}
+                            onChange={(e) => setWpInstallDomain(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs sm:text-sm text-slate-900 font-semibold focus:outline-none focus:border-[#21759b]"
+                          >
+                            {connectedDomains.map((dom) => (
+                              <option key={dom.name} value={dom.name}>{dom.name} ({dom.type === 'WordPress' ? 'Default Space' : dom.registrar + ' Connected'})</option>
+                            ))}
+                          </select>
+                          <p className="text-[10px] text-slate-400">Choose from your registered custom domains or any external custom nameserver pointed URLs mapped under your hosting panel.</p>
+                        </div>
+
                         {/* Site Name and Database */}
                         <div className="space-y-1.5">
                           <label className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono">Site Title Name</label>
@@ -832,7 +1377,7 @@ export default function DashboardView({
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold leading-relaxed">
                             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                               <span className="text-slate-400 text-[10px] block font-mono">ADMIN LOGIN URL</span>
-                              <span className="font-mono text-slate-700 font-bold">https://myvibehost.com/wp-admin</span>
+                              <span className="font-mono text-slate-700 font-bold">https://superai-builder.com/wp-admin</span>
                             </div>
                             <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                               <span className="text-slate-400 text-[10px] block font-mono">ADMIN LOGIN USERNAME</span>
@@ -876,18 +1421,18 @@ export default function DashboardView({
                       </div>
                     )}
 
-                    {/* SUB-VIEW 2: Write blog posts manually or let Gemini AI generate */}
+                    {/* SUB-VIEW 2: Write blog posts manually or let Super AI generate */}
                     {activeWpView === 'write' && (
                       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
                         
-                        {/* Option A: Gemini AI assisted post builder */}
+                        {/* Option A: Super AI assisted post builder */}
                         <div className="bg-[#21759b]/5 p-4 rounded-xl border border-[#21759b]/15 space-y-3">
                           <label className="text-xs text-[#21759b] font-extrabold flex items-center gap-1.5 leading-none">
                             <Sparkles className="w-4 h-4 text-[#21759b] animate-spin" />
-                            <span>Quick Gemini AI Post Assistant (Hinglish/Hindi/English)</span>
+                            <span>Quick Super AI Post Assistant (Hinglish/Hindi/English)</span>
                           </label>
                           <p className="text-[11px] text-slate-500 leading-normal font-medium">
-                            Simply describe your topic inside the bar, and our integrated Gemini API will formulate a search-optimized, structured article blog post in Hindi or English immediately!
+                            Simply describe your topic inside the bar, and our integrated Super AI API will formulate a search-optimized, structured article blog post in Hindi or English immediately!
                           </p>
 
                           <div className="flex gap-2">
@@ -895,7 +1440,7 @@ export default function DashboardView({
                               type="text"
                               value={wpPostPrompt}
                               onChange={(e) => setWpPostPrompt(e.target.value)}
-                              placeholder="E.g. 'WordPress vs custom HTML' or 'VibeHost speeds comparison in Hindi'..."
+                              placeholder="E.g. 'WordPress vs custom HTML' or 'Super AI speeds comparison in Hindi'..."
                               className="flex-grow bg-white border border-slate-250 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#21759b]"
                             />
                             <button
@@ -962,7 +1507,7 @@ export default function DashboardView({
                             </div>
                             <div className="bg-slate-950 px-4 py-0.5 rounded-md text-[10px] text-slate-400 font-mono flex items-center space-x-1.5">
                               <span className="text-emerald-500 font-extrabold">🔒</span>
-                              <span className="font-extrabold select-all">https://rajsahani-wp.vibehost.com</span>
+                              <span className="font-extrabold select-all">https://{wpInstallDomain}</span>
                             </div>
                             <span className="text-[10px] font-bold text-slate-400 font-mono tracking-widest block">LIVE WP PREVIEW</span>
                           </div>
@@ -973,7 +1518,7 @@ export default function DashboardView({
                             {/* WordPress Blog Custom Header */}
                             <div className="border-b-2 border-[#21759b] pb-4 space-y-2">
                               <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-slate-900 tracking-tight leading-tight">{wpSiteName}</h1>
-                              <p className="text-xs text-slate-500 italic font-bold">Just another beautifully optimized WordPress site by VibeHost</p>
+                              <p className="text-xs text-slate-500 italic font-bold">Just another beautifully optimized WordPress site by Super AI</p>
                             </div>
 
                             {/* Main split grid */}
@@ -1029,7 +1574,7 @@ export default function DashboardView({
                   <h3 className="font-display font-extrabold text-base text-slate-900">
                     Ecosystem AI Website Generator
                   </h3>
-                  <span className="text-[10px] text-brand-purple bg-brand-purple/10 px-2 py-0.5 rounded font-mono font-bold">GEMINI DIRECT PORT</span>
+                  <span className="text-[10px] text-brand-purple bg-brand-purple/10 px-2 py-0.5 rounded font-mono font-bold">SUPER AI DIRECT PORT</span>
                 </div>
 
                 <p className="text-xs text-slate-500 leading-relaxed">
@@ -1056,6 +1601,54 @@ export default function DashboardView({
                     </button>
                   </div>
                 </form>
+
+                {/* 5vibe Credits Info Banner */}
+                <div id="vibe-credits-details" className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mt-4 space-y-3 font-sans text-left">
+                  <div className="flex items-center gap-2 text-brand-purple font-black text-[11px] uppercase tracking-wider">
+                    <Sparkles className="w-4 h-4 text-brand-purple" />
+                    <span>What is my 5Vibe Coding Credit quota?</span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                    <strong>5Vibe Credits</strong> are premium generative performance tokens allocated to your Super AI Site Builder hosting server. They authorize the high-speed deployment of state-of-the-art web templates, codebases, and custom styling arrays powered by Super AI models directly beneath your domains.
+                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-brand-purple pl-3 italic">
+                    💡 <strong>Spend &amp; Profit:</strong> Each successful AI website iteration compiles instantly and expends exactly <strong>1 credit</strong>. You can consume them from the standalone sandbox panel to design customized spaces with instant workspace previews.
+                  </p>
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-150 mt-2">
+                    <div className="text-xs space-y-0.5 text-left">
+                      <div className="font-extrabold text-slate-800 flex items-center gap-1.5">
+                        <span>Active Balance:</span>
+                        <span className="text-emerald-700 font-black font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{vibeCredits} / 15 Credits</span>
+                      </div>
+                      <p className="text-[10.5px] text-slate-450 font-semibold font-sans">Quotas refresh on billing cycles or when topups trigger.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const added = vibeCredits + 5;
+                          updateVibeCreditsBothPlaces(added);
+                          setTerminalLogs(prev => [...prev, `Developer topup initiated: +5 Vibe credits successfully applied`]);
+                        }}
+                        className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-[10.5px] px-3 py-2 rounded-lg transition-all cursor-pointer border border-emerald-200"
+                      >
+                        ⚡ Fast Top-Up (+5 Cr)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActivePage('builder');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="bg-[#120a2a] hover:bg-[#25154f] text-white font-extrabold text-[10.5px] px-4 py-2 rounded-lg transition-all cursor-pointer whitespace-nowrap uppercase tracking-wider shadow-sm flex items-center gap-1"
+                      >
+                        <span>Launch Builder</span>
+                        <ArrowRight className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Interactive Results Outline */}
                 {outline && (
@@ -1119,7 +1712,7 @@ export default function DashboardView({
                       <Globe className="w-5 h-5 text-brand-purple" />
                       <span>Domain Domicile Search & Registry</span>
                     </h3>
-                    <p className="text-xs text-slate-500 mt-1">Check immediate Indian and global TLD registration availability powered by Gemini DNS engines.</p>
+                    <p className="text-xs text-slate-500 mt-1">Check immediate Indian and global TLD registration availability powered by Super AI DNS engines.</p>
                   </div>
                   <span className="text-[9.5px] font-mono tracking-widest font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">LOCAL CONTEXT SYNCED</span>
                 </div>

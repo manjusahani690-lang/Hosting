@@ -78,14 +78,11 @@ export default function Header({ activePage, setActivePage, isLoggedIn, setIsLog
               onClick={() => handleNavClick('home')} 
               className="flex items-center space-x-2 cursor-pointer group"
             >
-              <div className="h-10 w-10 rounded-xl bg-[#120a2a] flex items-center justify-center text-white shadow-lg shadow-[#120a2a]/20 group-hover:scale-105 transition-transform">
-                <Server className="h-5 w-5" />
+              <div className="h-10 w-10 rounded-xl bg-[#673ab7] flex items-center justify-center text-white shadow-lg shadow-[#673ab7]/20 group-hover:scale-105 transition-transform">
+                <Sparkles className="h-5 w-5 text-amber-200" />
               </div>
-              <span className="text-xl font-display font-bold tracking-tight text-brand-dark flex items-center gap-1.5">
-                VibeHost
-                <span className="text-[10px] bg-brand-purple/10 text-brand-purple font-sans font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                  SASTAA
-                </span>
+              <span className="text-xl font-display font-medium tracking-tight text-brand-dark flex items-center gap-1.5">
+                Super AI Site Builder
               </span>
             </div>
 

@@ -201,19 +201,61 @@ export default function BuilderView({ setActivePage }: BuilderViewProps) {
   const [activeEditSection, setActiveEditSection] = useState<'hero' | 'features' | 'stats' | 'testimonials' | 'faq' | 'publish' | 'security' | 'terms' | 'studio'>('studio');
   const [showPreviewTermsModal, setShowPreviewTermsModal] = useState(false);
 
-  // --- Initialize Credits ---
+  // --- Initialize Credits connected dynamically to Raj's Admin Customer Registry profile ---
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('hosting_ai_builder_credits');
-      if (stored === null) {
-        localStorage.setItem('hosting_ai_builder_credits', '10');
-      }
+      const syncCredits = () => {
+        const storedCustomers = localStorage.getItem('vibe_customers');
+        if (storedCustomers) {
+          try {
+            const parsed = JSON.parse(storedCustomers);
+            const rajProfile = parsed.find((c: any) => c.email.toLowerCase() === 'rajsahani.RgcS@gmail.com'.toLowerCase());
+            if (rajProfile && rajProfile.vibeCredits !== undefined) {
+              setCredits(rajProfile.vibeCredits);
+              localStorage.setItem('hosting_ai_builder_credits', rajProfile.vibeCredits.toString());
+              return;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        const stored = localStorage.getItem('hosting_ai_builder_credits');
+        if (stored !== null) {
+          setCredits(parseInt(stored, 10));
+        } else {
+          setCredits(10);
+          localStorage.setItem('hosting_ai_builder_credits', '10');
+        }
+      };
+
+      syncCredits();
+      window.addEventListener('storage', syncCredits);
+      return () => window.removeEventListener('storage', syncCredits);
     }
   }, []);
 
   const saveCredits = (newBalance: number) => {
     setCredits(newBalance);
-    localStorage.setItem('hosting_ai_builder_credits', newBalance.toString());
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hosting_ai_builder_credits', newBalance.toString());
+      
+      const storedCustomers = localStorage.getItem('vibe_customers');
+      if (storedCustomers) {
+        try {
+          const parsed = JSON.parse(storedCustomers);
+          const updated = parsed.map((c: any) => {
+            if (c.email.toLowerCase() === 'rajsahani.RgcS@gmail.com'.toLowerCase()) {
+              return { ...c, vibeCredits: newBalance };
+            }
+            return c;
+          });
+          localStorage.setItem('vibe_customers', JSON.stringify(updated));
+          window.dispatchEvent(new Event('storage'));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
   };
 
   // --- Map Vibe Color details ---
@@ -589,7 +631,7 @@ export default function BuilderView({ setActivePage }: BuilderViewProps) {
       `[AI Studio] Initializing refactoring stream...`,
       `[AI Studio] Model: ${selectedStudioModel} | Temp: ${studioTemperature}`,
       `[AI Studio] System Guidance: "${systemInstructions}"`,
-      `[System] Transmitting JSON draft data (size: ${JSON.stringify(websiteDraft).length} bytes) to Gemini API...`
+      `[System] Transmitting JSON draft data (size: ${JSON.stringify(websiteDraft).length} bytes) to Super AI API...`
     ]);
 
     // Spend 1 credit
@@ -617,7 +659,7 @@ export default function BuilderView({ setActivePage }: BuilderViewProps) {
         // Add successful log steps
         setStudioConsoleLogs(prev => [
           ...prev,
-          `[Gemini API] Received modified website structure successfully.`,
+          `[Super AI API] Received modified website structure successfully.`,
           `[Linter] Validating JSX tree compatibility...`,
           `[JSX Compiler] Standard updates integrated successfully on website canvas!`,
           `[Sandbox] Port 3000 re-binded and live updated gracefully.`
@@ -628,13 +670,13 @@ export default function BuilderView({ setActivePage }: BuilderViewProps) {
           { sender: 'model', text: `Successfully updated the website draft! I've incorporated your feedback: "${userMsg}". You can inspect the real-time live preview in the Interactive Browser tab.` }
         ]);
       } else {
-        throw new Error(data.error || "Gemini route failed to respond");
+        throw new Error(data.error || "Super AI route failed to respond");
       }
     } catch (err: any) {
       console.error(err);
       setStudioConsoleLogs(prev => [
         ...prev,
-        `[Error] Gemini rewrite failed: ${err?.message || err}. Reverting compile pipelines.`
+        `[Error] Super AI rewrite failed: ${err?.message || err}. Reverting compile pipelines.`
       ]);
       setStudioChatHistory(prev => [
           ...prev,
@@ -688,8 +730,31 @@ export default function BuilderView({ setActivePage }: BuilderViewProps) {
           };
         });
 
-        // Merge standard options with AI recommendations
-        const merged = [...standardList];
+        // Use real DNS-verified direct Matches list from server if available
+        let baseList = standardList;
+        if (data.directMatches) {
+          baseList = data.directMatches.map((r: any) => {
+            let localPrice = r.price || '₹699/yr';
+            if (localPrice.includes('$')) {
+              const num = parseFloat(localPrice.replace(/[^0-9.]/g, ''));
+              if (!isNaN(num)) {
+                if (r.tld === '.com') localPrice = '₹699/yr';
+                else if (r.tld === '.in') localPrice = '₹399/yr';
+                else if (r.tld === '.co.in') localPrice = '₹299/yr';
+                else if (r.tld === '.net') localPrice = '₹849/yr';
+                else localPrice = `₹${Math.round(num * 83)}/yr`;
+              }
+            }
+            return {
+              name: r.name,
+              status: r.status,
+              price: localPrice,
+              badges: r.badges
+            };
+          }).filter((m: any) => ['.com', '.in', '.co.in', '.net'].includes(m.name.slice(m.name.lastIndexOf('.'))));
+        }
+
+        const merged = [...baseList];
         formattedAi.forEach((item: any) => {
           if (!merged.some(m => m.name === item.name)) {
             merged.push(item);
@@ -1647,7 +1712,7 @@ export default function SaaSGeneratedWebsite() {
                           <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
                           <h4 className="font-extrabold text-[12px] uppercase tracking-wider text-indigo-200 font-display">Google AI Studio Core</h4>
                         </div>
-                        <p className="text-[10px] text-slate-300">Interact with Gemini models to refactor code</p>
+                        <p className="text-[10px] text-slate-300">Interact with Super AI models to refactor code</p>
                       </div>
                       <span className="text-[10px] uppercase font-mono font-bold bg-white/10 px-2 py-0.5 rounded text-white border border-white/10">3.5 FLASH</span>
                     </div>
@@ -1737,7 +1802,7 @@ export default function SaaSGeneratedWebsite() {
                               {studioLoading && (
                                 <div className="bg-white border border-slate-205 text-slate-500 self-start mr-auto p-2.5 rounded-xl flex items-center space-x-2 animate-pulse max-w-[85%] text-left">
                                   <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5b36ff]" />
-                                  <span className="text-[11px] font-bold">Gemini is rewriting layout...</span>
+                                  <span className="text-[11px] font-bold">Super AI is rewriting layout...</span>
                                 </div>
                               )}
                             </div>

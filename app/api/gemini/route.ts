@@ -1,5 +1,62 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { NextRequest, NextResponse } from "next/server";
+import { promises as dnsPromises } from "dns";
+
+const delay = (ms: number, value: any) => new Promise(resolve => setTimeout(() => resolve(value), ms));
+
+async function dnsLookupCheck(domain: string): Promise<boolean> {
+  try {
+    const lookupPromise = dnsPromises.lookup(domain).then(() => true).catch(() => false);
+    const nsPromise = dnsPromises.resolveNs(domain).then(() => true).catch(() => false);
+    const soaPromise = dnsPromises.resolveSoa(domain).then(() => true).catch(() => false);
+    
+    const results = await Promise.all([
+      Promise.race([lookupPromise, delay(350, false)]),
+      Promise.race([nsPromise, delay(350, false)]),
+      Promise.race([soaPromise, delay(350, false)])
+    ]);
+    return results.some(r => r === true);
+  } catch {
+    return false;
+  }
+}
+
+async function verifyDomainStatuses(domains: { name: string; tld?: string; status?: string; price: string; badges: string[] }[]): Promise<any[]> {
+  const checkOne = async (item: typeof domains[0]) => {
+    let available = true;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 750);
+      const res = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(item.name)}&type=SOA`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.Status !== 3) {
+          available = false;
+        }
+      } else {
+        const isResolving = await dnsLookupCheck(item.name);
+        if (isResolving) {
+          available = false;
+        }
+      }
+    } catch {
+      const isResolving = await dnsLookupCheck(item.name);
+      if (isResolving) {
+        available = false;
+      }
+    }
+    
+    return {
+      ...item,
+      status: available ? 'available' : 'taken'
+    };
+  };
+
+  return Promise.all(domains.map(d => checkOne(d)));
+}
 
 // Fallback generator for mock-free offline mode or missing API Key
 const parseDomainSearch = (searchTerm: string) => {
@@ -177,29 +234,44 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     const hasApiKey = apiKey && apiKey !== "MY_GEMINI_API_KEY" && apiKey.trim().length > 0;
 
-    if (!hasApiKey) {
-      // Return beautiful mock response gracefully
-      if (type === "domain") {
-        const results = getMockDomainResults(searchTerm || "mysite");
-        return NextResponse.json({ results });
-      } else {
-        const website = getMockWebsiteResults(prompt || "E-commerce store");
-        return NextResponse.json({ website });
-      }
-    }
-
-    const ai = new GoogleGenAI({
-      apiKey: apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        }
-      }
-    });
-
     if (type === "domain") {
       const { brand, inputTld } = parseDomainSearch(searchTerm || "mysite");
-      const geminiPrompt = `You are a professional domain name generator and branding consultant. 
+
+      // Generate directMatches base list
+      const directList = [
+        { name: `${brand}.com`, tld: '.com', price: '$9.99/yr', badges: ['Most Popular'] },
+        { name: `${brand}.in`, tld: '.in', price: '$4.99/yr', badges: ['India Choice'] },
+        { name: `${brand}.co.in`, tld: '.co.in', price: '$3.49/yr', badges: ['Indian Business'] },
+        { name: `${brand}.net`, tld: '.net', price: '$12.99/yr', badges: ['Tech Network'] },
+        { name: `${brand}.ai`, tld: '.ai', price: '$59.99/yr', badges: ['AI Industry'] },
+        { name: `${brand}.org`, tld: '.org', price: '$10.99/yr', badges: ['Organization'] },
+        { name: `${brand}.online`, tld: '.online', price: '$0.99/yr', badges: ['Super Saver'] }
+      ];
+
+      if (inputTld && !directList.some(d => d.tld === inputTld)) {
+        directList.unshift({
+          name: `${brand}${inputTld}`,
+          tld: inputTld,
+          price: inputTld === ".ai" ? "$59.99/yr" : inputTld === ".io" ? "$34.99/yr" : "$9.99/yr",
+          badges: ["User Requested"]
+        });
+      }
+
+      let generatedResults: any[] = [];
+
+      if (!hasApiKey) {
+        generatedResults = getMockDomainResults(searchTerm || "mysite");
+      } else {
+        const ai = new GoogleGenAI({
+          apiKey: apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            }
+          }
+        });
+
+        const geminiPrompt = `You are a professional domain name generator and branding consultant. 
 Generate a list of 8-10 high-quality domain name alternatives.
 We parsed the user's search query "${searchTerm || "mysite"}" and extracted:
 - Brand/Keyword: "${brand}"
@@ -223,53 +295,72 @@ Format strictly as a JSON object of this structure:
   ]
 }`;
 
-      let text = "";
-      try {
-        const response = await generateContentWithRetry(ai, {
-          model: "gemini-3.5-flash",
-          contents: geminiPrompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                results: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      name: { type: Type.STRING },
-                      tld: { type: Type.STRING },
-                      status: { type: Type.STRING, enum: ["available", "taken"] },
-                      price: { type: Type.STRING },
-                      badges: {
-                        type: Type.ARRAY,
-                        items: { type: Type.STRING }
-                      }
-                    },
-                    required: ["name", "tld", "status", "price", "badges"]
+        let text = "";
+        try {
+          const response = await generateContentWithRetry(ai, {
+            model: "gemini-3.5-flash",
+            contents: geminiPrompt,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                  results: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        name: { type: Type.STRING },
+                        tld: { type: Type.STRING },
+                        status: { type: Type.STRING, enum: ["available", "taken"] },
+                        price: { type: Type.STRING },
+                        badges: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING }
+                        }
+                      },
+                      required: ["name", "tld", "status", "price", "badges"]
+                    }
                   }
-                }
-              },
-              required: ["results"]
+                },
+                required: ["results"]
+              }
             }
-          }
-        });
-        text = response.text || "";
-      } catch (apiErr) {
-        console.error("Gemini domain generation failed, falling back gracefully to mock system:", apiErr);
-        return NextResponse.json({ results: getMockDomainResults(searchTerm || "mysite") });
+          });
+          text = response.text || "";
+          const parsed = JSON.parse(text);
+          generatedResults = parsed.results || [];
+        } catch (apiErr) {
+          console.error("Gemini domain generation failed, falling back gracefully to mock system:", apiErr);
+          generatedResults = getMockDomainResults(searchTerm || "mysite");
+        }
       }
 
-      try {
-        const data = JSON.parse(text);
-        return NextResponse.json(data);
-      } catch (parseErr) {
-        console.error("Failed to parse Gemini output: ", text);
-        return NextResponse.json({ results: getMockDomainResults(searchTerm || "mysite") });
-      }
+      // Verify domain statuses in real-time concurrently
+      const [verifiedDirect, verifiedResults] = await Promise.all([
+        verifyDomainStatuses(directList),
+        verifyDomainStatuses(generatedResults)
+      ]);
+
+      return NextResponse.json({
+        directMatches: verifiedDirect,
+        results: verifiedResults
+      });
 
     } else if (type === "website") {
+      if (!hasApiKey) {
+        const website = getMockWebsiteResults(prompt || "E-commerce store");
+        return NextResponse.json({ website });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey: apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
       const promptText = prompt || "creative web portfolio";
       
       let geminiPrompt = "";
